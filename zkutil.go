@@ -110,7 +110,7 @@ func GetProof(number1 *big.Int, number2 *big.Int, winHash *big.Int, factor *big.
 	if err != nil {
 		return nil, err
 	}
-	log.Println("Computing witness :", output)
+	log.Println("Computing witness :", string(output))
 
 	content, err := ioutil.ReadFile("./circuits/proof.json")
 	if err != nil {
