@@ -7,9 +7,10 @@ import (
 )
 
 type GameServer struct {
-	UserSet map[string]*User
-	L       sync.Locker
-	RoomSet map[string]*GameContext
+	UserSet      map[string]*User
+	L            sync.Locker
+	RoomSet      map[string]*GameContext
+	ContractPath string
 }
 
 func (gameServer *GameServer) GetAndTouchUser(id string) (*User, error) {
@@ -29,7 +30,7 @@ func (gameServer *GameServer) CreateRoomL(id string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	room := NewGameContext(user.Id)
+	room := NewGameContext(user.Id, gameServer.ContractPath)
 	gameServer.RoomSet[room.Id] = room
 
 	err = user.SetRoomInfo(room.Id, USER_STATE_HOST_GAME)

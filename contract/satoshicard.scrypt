@@ -1,0 +1,38 @@
+// import "verifier.scrypt";
+
+type FQ = int;
+
+struct G1Point {
+    FQ x;
+    FQ y;
+}
+
+struct FQ2 {
+    FQ x;
+    FQ y;
+}
+
+struct G2Point {
+    FQ2 x;
+    FQ2 y;
+}
+
+struct Proof {
+    G1Point a;
+    G2Point b;
+    G1Point c;
+}
+
+
+contract Satoshicard {
+
+    int hash1;
+    int hash2;
+    PubKey user1;
+    PubKey user2;
+
+    public function run(SigHashPreimage txPreimage,Proof proof,int winHash)
+    {
+        require(Tx.checkPreimage(txPreimage));
+    }
+}

@@ -1,8 +1,9 @@
 package main
 
 const (
-	ENV_DEV1 = "dev1"
-	ENV_DEV2 = "dev2"
+	ENV_DEV1          = "dev1"
+	ENV_DEV2          = "dev2"
+	ZOKRATES_CMD_PATH = "/Users/linxing/.local/bin/zokrates"
 )
 
 type RpcClientConfig struct {

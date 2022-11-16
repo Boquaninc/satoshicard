@@ -6,6 +6,7 @@ import (
 	"math/big"
 
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/sCrypt-Inc/go-scryptlib"
 )
 
 // type User struct {
@@ -67,10 +68,20 @@ type GameContext struct {
 	Id                 string
 	State              GameContextState
 	PlayerContextSet   map[string]*PlayerContext
+	Contract           *scryptlib.Contract
 	Step1ResultChannel chan string
 }
 
-func NewGameContext(host string) *GameContext {
+func NewGameContext(host string, contractPath string) *GameContext {
+	desc, err := scryptlib.LoadDesc(contractPath)
+	if err != nil {
+		panic(err)
+	}
+
+	contract, err := scryptlib.NewContractFromDesc(desc)
+	if err != nil {
+		panic(err)
+	}
 	return &GameContext{
 		Id:    RandStringBytesMaskImprSrcUnsafe(8),
 		State: WAIT_PLAYERS,
@@ -78,6 +89,7 @@ func NewGameContext(host string) *GameContext {
 			host: NewPlayerContext(host),
 		},
 		Step1ResultChannel: make(chan string, 2),
+		Contract:           &contract,
 	}
 }
 
