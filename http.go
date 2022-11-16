@@ -50,7 +50,7 @@ func MakeHttpJsonResponseByError(err error, data interface{}) []byte {
 	return MakeHttpJsonResponse(code, err.Error(), json.RawMessage(b))
 }
 
-func Aspect[T1 Request, T2 Response](
+func HttpAspect[T1 Request, T2 Response](
 	handler func(rsp http.ResponseWriter, req *http.Request, request *T1) (*T2, error),
 ) func(rsp http.ResponseWriter, req *http.Request) {
 	return func(rsp http.ResponseWriter, req *http.Request) {
@@ -76,9 +76,16 @@ func Aspect[T1 Request, T2 Response](
 }
 
 type Request interface {
-	JoinGameRequest | SubmitHashRequest
+	// JoinGameRequest | SubmitHashRequest
 }
 
 type Response interface {
-	JoinGameResponse | SubmitHashResponse
+	// JoinGameResponse | SubmitHashResponse
+}
+
+type JoinGameRequest struct {
+}
+
+type JoinGameResponse struct {
+	Id string `json:"id"`
 }

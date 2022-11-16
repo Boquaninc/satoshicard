@@ -28,7 +28,9 @@ var gConfigDev2 *Config = &Config{
 func InitConfig(env string) {
 	switch env {
 	case ENV_DEV1:
+		gConfig = gConfigDev1
 	case ENV_DEV2:
+		gConfig = gConfigDev2
 	default:
 		panic("not support env")
 	}
