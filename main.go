@@ -4,9 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"math/big"
-	"net/http"
-	"sync"
 )
 
 const (
@@ -38,28 +35,6 @@ const (
 	METHOD_CREATE_ROOM  Method = 2
 	METHOD_JOIN_ROOM    Method = 3
 )
-
-type GameContextState int
-
-const (
-	WAIT_DECIDE_MODE GameContextState = 0
-	WAIT_PLAYERS     GameContextState = 1
-	WAIT_HASHS       GameContextState = 2
-)
-
-type PlayerContext struct {
-	Id       string
-	Preimage *big.Int
-	Hash     *big.Int
-}
-type GameContext struct {
-	PlayerContexts []*PlayerContext
-	State          GameContextState
-	L              sync.Locker
-	Listen         string
-	Server         *http.Server
-	RoomIp         string
-}
 
 func main() {
 	env := ""
