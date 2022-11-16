@@ -1,12 +1,32 @@
 package main
 
-import "math/big"
+import (
+	"encoding/json"
+	"io/ioutil"
+	"log"
+	"math/big"
+	"os/exec"
 
-type Proof struct {
-	A []string   `json:"a"`
-	B [][]string `json:"b"`
-	C []string   `json:"c"`
-}
+	"github.com/iden3/go-iden3-crypto/mimc7"
+)
+
+const (
+	CARDS_NUM = 52
+)
+
+type (
+	Proof struct {
+		A []string   `json:"a"`
+		B [][]string `json:"b"`
+		C []string   `json:"c"`
+	}
+
+	ProofJson struct {
+		Scheme string `json:"scheme"`
+		Curve  string `json:"curve"`
+		P      Proof  `json:"proof"`
+	}
+)
 
 var cards []string = []string{
 	"not a card",
@@ -65,13 +85,46 @@ var cards []string = []string{
 }
 
 func GetCards(number1 *big.Int, number2 *big.Int) []int {
-	return nil
+	originCards := make([]int, CARDS_NUM)
+	for index := range originCards {
+		originCards[index] = index + 1
+	}
+	seed := new(big.Int)
+	seed = seed.Mul(number1, number2)
+
+	gotCards := make([]int, 10)
+	for i := 0; i < len(gotCards); i++ {
+		seed = seed.Mul(seed, seed)
+		gotOriginBigIndex := seed.Mod(seed, big.NewInt(int64(len(originCards)-1-i)))
+		gotOriginIndex := int(gotOriginBigIndex.Int64())
+		originCards[gotOriginIndex], originCards[len(originCards)-1-i] = originCards[len(originCards)-1-i], originCards[gotOriginIndex]
+		gotCards[i] = originCards[gotOriginIndex]
+	}
+	return gotCards
 }
 
 func GetProof(number1 *big.Int, number2 *big.Int, winHash *big.Int, factor *big.Int) (*Proof, error) {
-	return nil, nil
+
+	cmd := exec.Command("sh", "scripts/gen_proof.sh", number1.String(), number2.String(), winHash.String(), factor.String())
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+	log.Println("Computing witness :", output)
+
+	content, err := ioutil.ReadFile("./circuits/proof.json")
+	if err != nil {
+		return nil, err
+	}
+
+	pj := &ProofJson{}
+
+	if err := json.Unmarshal(content, &pj); err != nil {
+		return nil, err
+	}
+	return &pj.P, nil
 }
 
 func GetHash(preimage *big.Int) *big.Int {
-	return nil
+	return mimc7.MIMC7Hash(preimage, big.NewInt(0))
 }
