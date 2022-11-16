@@ -41,4 +41,6 @@ func main() {
 	flag.StringVar(&env, "env", "", "env")
 	flag.Parse()
 	InitConfig(env)
+	gameServer := NewGameServer(gConfig)
+	NewHttpController(gConfig.Listen, gameServer)
 }

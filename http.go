@@ -76,16 +76,9 @@ func HttpAspect[T1 Request, T2 Response](
 }
 
 type Request interface {
-	// JoinGameRequest | SubmitHashRequest
+	JoinRandomRoomRequest
 }
 
 type Response interface {
-	// JoinGameResponse | SubmitHashResponse
-}
-
-type JoinGameRequest struct {
-}
-
-type JoinGameResponse struct {
-	Id string `json:"id"`
+	JoinRandomRoomResponse
 }

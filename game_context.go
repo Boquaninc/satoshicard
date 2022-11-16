@@ -6,41 +6,13 @@ import (
 	"math/big"
 
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/wire"
 	"github.com/sCrypt-Inc/go-scryptlib"
 )
 
-// type User struct {
-// 	Key *btcec.PrivateKey
-// }
-
-// func (this *User) Address() btcutil.Address {
-// 	key := this.Key.PubKey()
-// 	pkHash := btcutil.Hash160(key.SerializeCompressed())
-// 	addr, err := btcutil.NewAddressPubKeyHash(pkHash, gNet)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	return addr
-// }
-
-// func (this *User) Pubkey() *btcec.PublicKey {
-// 	return this.Key.PubKey()
-// }
-
-// func (this *User) BecPubkey() *bec.PublicKey {
-// 	return (*bec.PublicKey)(this.Key.PubKey().ToECDSA())
-// }
-
-// func NewUser(key string) *User {
-// 	keyByte, err := hex.DecodeString(key)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	privateKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), keyByte)
-// 	return &User{
-// 		Key: privateKey,
-// 	}
-// }
+const (
+	GAMBLING_CAPITAL = 100000000
+)
 
 type PlayerContext struct {
 	Id       string
@@ -62,6 +34,7 @@ type GameContextState int
 const (
 	WAIT_PLAYERS    GameContextState = 0
 	WAIT_STEP1_INFO GameContextState = 1
+	WAIT_STEP2_INFO GameContextState = 2
 )
 
 type GameContext struct {
@@ -142,25 +115,62 @@ func (gameContext *GameContext) SetStep1Info(id string, step1Info *Step1Info) (c
 	playerContext.Index = step1Info.Index
 	playerContext.Pubkey = pubkey
 	playerContext.Hash = hash
+	err = gameContext.ProcessStep1()
+	if err == nil {
+		gameContext.SetState(WAIT_STEP2_INFO)
+	}
 	return gameContext.Step1ResultChannel, nil
 }
 
-func (gameContext *GameContext) ProcessStep1() {
+func (gameContext *GameContext) ProcessStep1() error {
 	readyCount := 0
+	playerContexts := make([]*PlayerContext, 0, 2)
 	for _, playerContext := range gameContext.PlayerContextSet {
 		if playerContext.Hash != nil &&
 			playerContext.Pubkey != nil &&
 			playerContext.Index != -1 &&
 			playerContext.Txid != "" {
 			readyCount++
+			playerContexts = append(playerContexts, playerContext)
 		}
 	}
 	if readyCount < 2 {
-		return
+		return errors.New("not ready")
 	}
-	//todo
-	gameContext.Step1ResultChannel <- ""
-	gameContext.Step1ResultChannel <- ""
+
+	constructorParams := map[string]scryptlib.ScryptType{
+		"hash1": scryptlib.NewIntFromBigInt(playerContexts[0].Hash),
+		"hash2": scryptlib.NewIntFromBigInt(playerContexts[1].Hash),
+		"user1": scryptlib.NewPubKey(ToBecPubkey(playerContexts[0].Pubkey)),
+		"user2": scryptlib.NewPubKey(ToBecPubkey(playerContexts[1].Pubkey)),
+	}
+	err := gameContext.Contract.SetConstructorParams(constructorParams)
+	if err != nil {
+		panic(err)
+	}
+
+	script, err := gameContext.Contract.GetLockingScript()
+	if err != nil {
+		panic(err)
+	}
+	scriptHex := script.String()
+
+	scriptByte, err := hex.DecodeString(scriptHex)
+	if err != nil {
+		panic(err)
+	}
+
+	msgTx := wire.NewMsgTx(2)
+	AddVin(msgTx, playerContexts[0].Txid, playerContexts[0].Index)
+	AddVin(msgTx, playerContexts[1].Txid, playerContexts[1].Index)
+	AddVout(msgTx, scriptByte, GAMBLING_CAPITAL)
+
+	rawTx := SeserializeMsgTx(msgTx)
+
+	gameContext.Step1ResultChannel <- rawTx
+	gameContext.Step1ResultChannel <- rawTx
+	close(gameContext.Step1ResultChannel)
+	return nil
 }
 
 func (gameContext *GameContext) SetState(state GameContextState) {

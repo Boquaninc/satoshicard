@@ -1,6 +1,9 @@
 package main
 
-import "errors"
+import (
+	"errors"
+	"time"
+)
 
 type UserState int
 
@@ -15,6 +18,13 @@ type User struct {
 	State             UserState
 	HeartBeatLastTime int64
 	RoomId            string
+}
+
+func NewUser() *User {
+	return &User{
+		Id:                RandStringBytesMaskImprSrcUnsafe(8),
+		HeartBeatLastTime: time.Now().Unix(),
+	}
 }
 
 func (user *User) SetState(state UserState) {

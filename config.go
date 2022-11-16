@@ -13,8 +13,9 @@ type RpcClientConfig struct {
 }
 
 type Config struct {
-	RpcClient *RpcClientConfig
-	Listen    string
+	RpcClient    *RpcClientConfig
+	ContractPath string
+	Listen       string
 }
 
 var gConfig *Config

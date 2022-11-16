@@ -13,10 +13,12 @@ import (
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/libsv/go-bk/bec"
 	"github.com/tyler-smith/go-bip39"
 )
 
@@ -387,4 +389,23 @@ func ParseBadgeVoutScript(script []byte) (btcutil.Address, int64) {
 		panic("ParseBadgeVoutScript 6")
 	}
 	return address, value
+}
+
+func ToBecPubkey(Key *btcec.PublicKey) *bec.PublicKey {
+	return (*bec.PublicKey)(Key.ToECDSA())
+}
+
+func AddVin(msgTx *wire.MsgTx, prehashStr string, preindex int) {
+	prehash, err := chainhash.NewHashFromStr(prehashStr)
+	if err != nil {
+		panic(err)
+	}
+	preOutPoint := wire.NewOutPoint(prehash, uint32(preindex))
+	vin := wire.NewTxIn(preOutPoint, nil, nil)
+	msgTx.AddTxIn(vin)
+}
+
+func AddVout(msgTx *wire.MsgTx, pkScript []byte, amount int64) {
+	vout := wire.NewTxOut(amount, pkScript)
+	msgTx.AddTxOut(vout)
 }
