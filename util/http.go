@@ -1,10 +1,6 @@
-package main
+package util
 
-import (
-	"encoding/json"
-	"io/ioutil"
-	"net/http"
-)
+import "encoding/json"
 
 const (
 	SERVER_ERROR_CODE = -1
@@ -48,37 +44,4 @@ func MakeHttpJsonResponseByError(err error, data interface{}) []byte {
 		panic(err)
 	}
 	return MakeHttpJsonResponse(code, err.Error(), json.RawMessage(b))
-}
-
-func HttpAspect[T1 Request, T2 Response](
-	handler func(rsp http.ResponseWriter, req *http.Request, request *T1) (*T2, error),
-) func(rsp http.ResponseWriter, req *http.Request) {
-	return func(rsp http.ResponseWriter, req *http.Request) {
-		request := new(T1)
-		body, err := ioutil.ReadAll(req.Body)
-		if err != nil {
-			panic(err)
-		}
-		if len(body) == 0 {
-			body = []byte("{}")
-		}
-		err = json.Unmarshal(body, request)
-		if err != nil {
-			return
-		}
-		response, err := handler(rsp, req, request)
-		if err != nil {
-			return
-		}
-		rsp.Write(MakeHttpJsonResponseByInterface(response))
-		return
-	}
-}
-
-type Request interface {
-	JoinRandomRoomRequest
-}
-
-type Response interface {
-	JoinRandomRoomResponse
 }
