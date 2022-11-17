@@ -1,8 +1,7 @@
 package client
 
+import "satoshicard/server"
+
 type Client interface {
-	Host()
-	Join()
-	SubmitStep1Info()
-	SubmitStep2Info()
+	Join() (*server.JoinResponse, error)
 }

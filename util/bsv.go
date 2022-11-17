@@ -395,13 +395,13 @@ func ToBecPubkey(Key *btcec.PublicKey) *bec.PublicKey {
 	return (*bec.PublicKey)(Key.ToECDSA())
 }
 
-func AddVin(msgTx *wire.MsgTx, prehashStr string, preindex int) {
+func AddVin(msgTx *wire.MsgTx, prehashStr string, preindex int, script []byte) {
 	prehash, err := chainhash.NewHashFromStr(prehashStr)
 	if err != nil {
 		panic(err)
 	}
 	preOutPoint := wire.NewOutPoint(prehash, uint32(preindex))
-	vin := wire.NewTxIn(preOutPoint, nil, nil)
+	vin := wire.NewTxIn(preOutPoint, script, nil)
 	msgTx.AddTxIn(vin)
 }
 

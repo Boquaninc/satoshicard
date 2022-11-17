@@ -19,6 +19,8 @@ require (
 
 require (
 	github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f // indirect
+	github.com/btcsuite/go-socks v0.0.0-20170105172521-4720035b7bfd // indirect
+	github.com/btcsuite/websocket v0.0.0-20150119174127-31079b680792 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/sCrypt-Inc/go-bt/v2 v2.1.0-beta.8 // indirect
 	github.com/thoas/go-funk v0.9.2 // indirect

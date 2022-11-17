@@ -3,6 +3,7 @@ package conf
 type Config struct {
 	Listen       string
 	ContractPath string
+	Key          string
 }
 
 var gConfig *Config = nil
@@ -13,6 +14,8 @@ func Init(env string) {
 		gConfig = dev1Config
 	case "dev2":
 		gConfig = dev2Config
+	default:
+		panic("not support env")
 	}
 }
 
