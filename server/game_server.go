@@ -301,7 +301,7 @@ func (gameServer *GameServer) GetGenesisMsgTx(sign bool) (*wire.MsgTx, error) {
 	msgTx := wire.NewMsgTx(2)
 	util.AddVin(msgTx, playerContexts[0].Txid, playerContexts[0].Index, playerContexts[0].UnlockScript)
 	util.AddVin(msgTx, playerContexts[1].Txid, playerContexts[1].Index, playerContexts[1].UnlockScript)
-	util.AddVout(msgTx, scriptByte, GAMBLING_CAPITAL*MAX_FACTOR)
+	util.AddVout(msgTx, scriptByte, GAMBLING_CAPITAL*MAX_FACTOR*2)
 	return msgTx, nil
 }
 

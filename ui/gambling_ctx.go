@@ -124,5 +124,22 @@ func (this *SignGamblingCtx) GetProof() (*scryptlib.Struct, error) {
 	if err != nil {
 		return nil, err
 	}
+	proof.A = []string{
+		"0x2dddc80b67d41ae5d8a52dc402f08cdeb372f8e3cad434f7e2f33dd39bcdfb0c",
+		"0x25643783288f7794c4f814abf086d76507f1783d1e793900ce7eb78a6ce44659",
+	}
+	proof.B[0] = []string{
+		"0x05466a9d214efa30a0b0976cbf01209f6ef031c95eb7f17a2a6a54c82b1df215",
+		"0x15e3b5fe63bb130dfa97b88733ce45e7c41bb33dc189cf8f232466bb222d4fec",
+	}
+	proof.B[1] = []string{
+		"0x20e7a7610f15a639b4eb9704922e47fd3b1279b39518f2da52e9843a7aba59eb",
+		"0x3003465623d8f9c38952b4abf4c2fefddb5449f12f9619927943c43ecc1bedec",
+	}
+	proof.C = []string{
+		"0x01cae695071bbeb0ca0adfe716a9948620e3faabaa6aa7521654d9ab253b2a51",
+		"0x17f04306cf0d093cf2d544d19aa1aea9f52df35dc7521e773115eb489960997a",
+	}
+	// util.PrintJson(proof)
 	return NewProofScryptlibStructFromProof(proof), nil
 }

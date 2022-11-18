@@ -457,7 +457,7 @@ func (uictx *UIContext) DoEventWin(event *UIEvent) error {
 
 	vin := &TxOutPoint{
 		Txid:    genesisMsgTx.TxHash().String(),
-		Index:   TXPOINT_VIN_INDEX,
+		Index:   0,
 		Value:   genesisMsgTx.TxOut[0].Value,
 		Type:    TXPOINT_TYPE_GAMBLING,
 		Script:  genesisMsgTx.TxOut[0].PkScript,
@@ -471,6 +471,9 @@ func (uictx *UIContext) DoEventWin(event *UIEvent) error {
 	msgTx, err := buildTxContext.SupplementFeeAndSign()
 	if err != nil {
 		panic(err)
+	}
+	for _, vin := range msgTx.TxIn {
+		fmt.Println("DoEventWin :", vin.PreviousOutPoint)
 	}
 
 	hash, err := uictx.RpcClient.SendRawTransaction(msgTx, true)

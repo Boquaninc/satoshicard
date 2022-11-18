@@ -134,6 +134,12 @@ func Test3() {
 		panic(err)
 	}
 	util.PrintJson(proof)
+
+	proof2, err := util.GetProof(number1, number2, winhash, factor)
+	if err != nil {
+		panic(err)
+	}
+	util.PrintJson(proof2)
 }
 
 func DoMain() {
