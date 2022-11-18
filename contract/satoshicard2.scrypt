@@ -32,20 +32,51 @@ contract Satoshicard {
     PubKey user2;
     int maxfactor;
 
+
+
+//     {
+//   "scheme": "g16",
+//   "curve": "bn128",
+//   "proof": {
+//     "a": [
+//       "0x0e8784f99d5b6e507033053f19a123ca9d64813fc75e5bbd8b2af8f935ffa519",
+//       "0x127855b55ac5c07308e34ba89edfb0b165153104faaeff6ec2322e100dc5a9be"
+//     ],
+//     "b": [
+//       [
+//         "0x012e6a9500965a6978bf40118bed2070d3f5c0e3137558bad2aee39d26f3caeb",
+//         "0x04d89437deffaca6afa1c93fc85f28882116f6f393650244a610c0277929d1fa"
+//       ],
+//       [
+//         "0x199daacf33cd725852db62534ad9bca8c7e9c46e9daa7b7845c68a6630f40102",
+//         "0x2afe1ae6f1d9b38fdcee4a3b35432fc6bda637c4616d82d1f7cbad29f9910b34"
+//       ]
+//     ],
+//     "c": [
+//       "0x0fbed969c53a96819d2d2435676187a0a44a3e8d1ec8aab8a0a52982715b2c87",
+//       "0x2c0525f000183cccfe74e1348cb997a49301229726a836bc5fbd6cb286b9ccf5"
+//     ]
+//   },
+//   "inputs": [
+//     "0x226b4640946fa9a4c6fb44e78f3f7c3fb42f5d336f28e31d129994114bae2623",
+//     "0x0000000000000000000000000000000000000000000000000000000000000002"
+//   ]
+// }
+
     function verify(int[4] inputs, Proof proof) : bool{
         require(inputs[0]==22);
         require(inputs[1]==27);
         require(inputs[2]==this.hash2);
         require(inputs[3]==2);
 
-        require(proof.a.x==0x2dddc80b67d41ae5d8a52dc402f08cdeb372f8e3cad434f7e2f33dd39bcdfb0c);
-        require(proof.a.y==0x25643783288f7794c4f814abf086d76507f1783d1e793900ce7eb78a6ce44659);
-        require(proof.b.x.x==0x05466a9d214efa30a0b0976cbf01209f6ef031c95eb7f17a2a6a54c82b1df215);
-        require(proof.b.x.y==0x15e3b5fe63bb130dfa97b88733ce45e7c41bb33dc189cf8f232466bb222d4fec);
-        require(proof.b.y.x==0x20e7a7610f15a639b4eb9704922e47fd3b1279b39518f2da52e9843a7aba59eb);
-        require(proof.b.y.y==0x3003465623d8f9c38952b4abf4c2fefddb5449f12f9619927943c43ecc1bedec);
-        require(proof.c.x==0x01cae695071bbeb0ca0adfe716a9948620e3faabaa6aa7521654d9ab253b2a51);
-        require(proof.c.y==0x17f04306cf0d093cf2d544d19aa1aea9f52df35dc7521e773115eb489960997a);
+        require(proof.a.x==0x0e8784f99d5b6e507033053f19a123ca9d64813fc75e5bbd8b2af8f935ffa519);
+        require(proof.a.y==0x127855b55ac5c07308e34ba89edfb0b165153104faaeff6ec2322e100dc5a9be);
+        require(proof.b.x.x==0x012e6a9500965a6978bf40118bed2070d3f5c0e3137558bad2aee39d26f3caeb);
+        require(proof.b.x.y==0x04d89437deffaca6afa1c93fc85f28882116f6f393650244a610c0277929d1fa);
+        require(proof.b.y.x==0x199daacf33cd725852db62534ad9bca8c7e9c46e9daa7b7845c68a6630f40102);
+        require(proof.b.y.y==0x2afe1ae6f1d9b38fdcee4a3b35432fc6bda637c4616d82d1f7cbad29f9910b34);
+        require(proof.c.x==0x0fbed969c53a96819d2d2435676187a0a44a3e8d1ec8aab8a0a52982715b2c87);
+        require(proof.c.y==0x2c0525f000183cccfe74e1348cb997a49301229726a836bc5fbd6cb286b9ccf5);
         return true;
     }   
     public function run(SigHashPreimage txPreimage,Proof proof,int number1,int number2,int winHash,int factor)

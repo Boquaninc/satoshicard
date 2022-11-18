@@ -108,6 +108,11 @@ func (this *BuildTxContext) SignGambling(msgTx *wire.MsgTx, index int, txPoint *
 		panic(err)
 	}
 
+	// fmt.Println("SignGambling 1:", (signGamblingCtx.Number1))
+	// fmt.Println("SignGambling 2:", (signGamblingCtx.Number2))
+	// fmt.Println("SignGambling 3:", (signGamblingCtx.WinHash))
+	// fmt.Println("SignGambling 4:", (signGamblingCtx.Factor))
+
 	method := "run"
 	signGamblingCtx.Contract.SetPublicFunctionParams(
 		method,
