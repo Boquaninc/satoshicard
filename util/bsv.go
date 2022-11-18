@@ -57,6 +57,10 @@ const (
 
 var gNet *chaincfg.Params = &chaincfg.RegressionNetParams
 
+func GetNet() *chaincfg.Params {
+	return gNet
+}
+
 func SeserializeMsgTx(msgtx *wire.MsgTx) string {
 	buf := make([]byte, 0, msgtx.SerializeSize())
 	buff := bytes.NewBuffer(buf)
@@ -64,6 +68,19 @@ func SeserializeMsgTx(msgtx *wire.MsgTx) string {
 	rawtxByte := buff.Bytes()
 	rawtx := hex.EncodeToString(rawtxByte)
 	return rawtx
+}
+
+func DeserializeRawTx(rawtx string) *wire.MsgTx {
+	serializedTx, err := hex.DecodeString(rawtx)
+	if err != nil {
+		panic(err)
+	}
+	msgtx := wire.NewMsgTx(TX_VERSION)
+	err = msgtx.Deserialize(bytes.NewReader(serializedTx))
+	if err != nil {
+		panic(err)
+	}
+	return msgtx
 }
 
 func WritePushDataScript(buf *bytes.Buffer, data []byte) error {
@@ -408,4 +425,18 @@ func AddVin(msgTx *wire.MsgTx, prehashStr string, preindex int, script []byte) {
 func AddVout(msgTx *wire.MsgTx, pkScript []byte, amount int64) {
 	vout := wire.NewTxOut(amount, pkScript)
 	msgTx.AddTxOut(vout)
+}
+
+func GetP2PKHUnlockScript(msgTx *wire.MsgTx, index int, key *btcec.PrivateKey, lockScript []byte, value int64) []byte {
+	sig := GetSig(msgTx, index, lockScript, uint64(value), txscript.SigHashAll|SigHashForkID, key)
+
+	builder := txscript.NewScriptBuilder()
+
+	pubbyte := key.PubKey().SerializeCompressed()
+
+	b, err := builder.AddData(sig).AddData(pubbyte).Script()
+	if err != nil {
+		panic(err)
+	}
+	return b
 }

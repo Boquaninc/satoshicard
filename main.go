@@ -2,24 +2,128 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"math/big"
 	"satoshicard/conf"
 	"satoshicard/ui"
+	"satoshicard/util"
 	"time"
 )
 
 type Flags struct {
-	Env string
+	Env  string
+	Mode int64
+}
+
+func WaitInput() {
+	waitinput := ""
+	fmt.Scanf("%s", &waitinput)
+}
+
+func Test1() {
+	config := conf.GetConfig()
+	uictx := ui.NewUIContext(config)
+	hostEvent := &ui.UIEvent{
+		Event:  ui.EVENT_HOST,
+		Params: "",
+	}
+	uictx.EventChannel <- hostEvent
+
+	WaitInput()
+
+	preimageEvent := &ui.UIEvent{
+		Event:  ui.EVENT_PREIMAGE,
+		Params: "1",
+	}
+	uictx.EventChannel <- preimageEvent
+
+	WaitInput()
+
+	signEvent := &ui.UIEvent{
+		Event:  ui.EVENT_SIGN,
+		Params: "",
+	}
+	uictx.EventChannel <- signEvent
+
+	WaitInput()
+	publishEvent := &ui.UIEvent{
+		Event:  ui.EVENT_PUBLISH,
+		Params: "",
+	}
+	uictx.EventChannel <- publishEvent
+
+	WaitInput()
+	openEvent := &ui.UIEvent{
+		Event:  ui.EVENT_OPEN,
+		Params: "",
+	}
+	uictx.EventChannel <- openEvent
+}
+
+func Test2() {
+	config := conf.GetConfig()
+	uictx := ui.NewUIContext(config)
+	joinEvent := &ui.UIEvent{
+		Event:  ui.EVENT_JOIN,
+		Params: "127.0.0.1:10001",
+	}
+	uictx.EventChannel <- joinEvent
+
+	WaitInput()
+
+	preimageEvent := &ui.UIEvent{
+		Event:  ui.EVENT_PREIMAGE,
+		Params: "2",
+	}
+	uictx.EventChannel <- preimageEvent
+
+	WaitInput()
+	signEvent := &ui.UIEvent{
+		Event:  ui.EVENT_SIGN,
+		Params: "",
+	}
+	uictx.EventChannel <- signEvent
+
+	WaitInput()
+	openEvent := &ui.UIEvent{
+		Event:  ui.EVENT_OPEN,
+		Params: "",
+	}
+	uictx.EventChannel <- openEvent
+}
+
+func Test3() {
+	number1 := big.NewInt(3)
+	number2 := big.NewInt(2)
+	cards := util.GetCardStrs(number1, number2)
+	fmt.Println(cards)
+}
+
+func DoMain() {
+	config := conf.GetConfig()
+	ui.NewUIContext(config)
 }
 
 func main() {
 	// uictx := &ui.UIContext{}
 	flags := &Flags{}
 	flag.StringVar(&flags.Env, "env", "", "")
+	flag.Int64Var(&flags.Mode, "mode", 0, "")
 	flag.Parse()
-
 	conf.Init(flags.Env)
-	config := conf.GetConfig()
-	ui.NewUIContext(config)
+
+	switch flags.Mode {
+	case 0:
+		DoMain()
+	case 1:
+		Test1()
+	case 2:
+		Test2()
+	case 3:
+		Test3()
+	default:
+		panic("not support mode")
+	}
 	for {
 		time.Sleep(time.Minute)
 	}

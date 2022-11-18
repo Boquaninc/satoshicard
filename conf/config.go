@@ -1,9 +1,15 @@
 package conf
 
+type RpcClientConfig struct {
+	Host     string
+	Username string
+	Password string
+}
 type Config struct {
-	Listen       string
-	ContractPath string
-	Key          string
+	RpcClientConfig *RpcClientConfig
+	Listen          string
+	ContractPath    string
+	Key             string
 }
 
 var gConfig *Config = nil

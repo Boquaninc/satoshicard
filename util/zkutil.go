@@ -2,10 +2,12 @@ package util
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"math/big"
 	"os/exec"
+	"strings"
 
 	"github.com/iden3/go-iden3-crypto/mimc7"
 )
@@ -28,7 +30,7 @@ type (
 	}
 )
 
-var cards []string = []string{
+var CardCode2Str []string = []string{
 	"not a card",
 	"方片A",
 	"方片2",
@@ -82,6 +84,28 @@ var cards []string = []string{
 	"黑桃Jack",
 	"黑桃Queen",
 	"黑桃King",
+}
+
+func GetCardStrs(number1 *big.Int, number2 *big.Int) []string {
+	fmt.Println(number1, number2)
+	cards := GetCards(number1, number2)
+	fmt.Println(cards)
+	cardStrs1 := make([]string, 0, 5)
+	cardStrs2 := make([]string, 0, 5)
+	for i, card := range cards {
+		cardStr := CardCode2Str[card]
+		if i < 5 {
+			cardStrs1 = append(cardStrs1, cardStr)
+		} else {
+			cardStrs2 = append(cardStrs2, cardStr)
+		}
+	}
+	user1Card := strings.Join(cardStrs1, ",")
+	user2Card := strings.Join(cardStrs2, ",")
+	return []string{
+		user1Card,
+		user2Card,
+	}
 }
 
 func GetCards(number1 *big.Int, number2 *big.Int) []int {

@@ -31,8 +31,14 @@ contract Satoshicard {
     PubKey user1;
     PubKey user2;
 
-    public function run(SigHashPreimage txPreimage,Proof proof,int winHash)
+    function verify(int[4] inputs, Proof proof) : bool{
+        require(inputs[2]==this.hash1);
+        require(inputs[3]==2);
+        return true;
+    }   
+    public function run(SigHashPreimage txPreimage,Proof proof,int number1,int number2,int winHash,int factor)
     {
         require(Tx.checkPreimage(txPreimage));
+
     }
 }
