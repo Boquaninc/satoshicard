@@ -33,7 +33,7 @@ func Test1() {
 
 	preimageEvent := &ui.UIEvent{
 		Event:  ui.EVENT_PREIMAGE,
-		Params: "1",
+		Params: "5",
 	}
 	uictx.EventChannel <- preimageEvent
 
@@ -58,6 +58,20 @@ func Test1() {
 		Params: "",
 	}
 	uictx.EventChannel <- openEvent
+
+	WaitInput()
+	checkEvent := &ui.UIEvent{
+		Event:  ui.EVENT_CHEKC,
+		Params: "",
+	}
+	uictx.EventChannel <- checkEvent
+
+	WaitInput()
+	loseEvent := &ui.UIEvent{
+		Event:  ui.EVENT_LOSE,
+		Params: "",
+	}
+	uictx.EventChannel <- loseEvent
 }
 
 func Test2() {
@@ -73,7 +87,7 @@ func Test2() {
 
 	preimageEvent := &ui.UIEvent{
 		Event:  ui.EVENT_PREIMAGE,
-		Params: "2",
+		Params: "11",
 	}
 	uictx.EventChannel <- preimageEvent
 
@@ -90,13 +104,36 @@ func Test2() {
 		Params: "",
 	}
 	uictx.EventChannel <- openEvent
+
+	WaitInput()
+	checkEvent := &ui.UIEvent{
+		Event:  ui.EVENT_CHEKC,
+		Params: "",
+	}
+	uictx.EventChannel <- checkEvent
+
+	WaitInput()
+	winEvent := &ui.UIEvent{
+		Event:  ui.EVENT_WIN,
+		Params: "",
+	}
+	uictx.EventChannel <- winEvent
 }
 
 func Test3() {
-	number1 := big.NewInt(3)
-	number2 := big.NewInt(2)
+	number1 := big.NewInt(2)
+	number2 := big.NewInt(27)
+	winhash := util.GetHash(number2)
+	factor := big.NewInt(2)
+
 	cards := util.GetCardStrs(number1, number2)
 	fmt.Println(cards)
+
+	proof, err := util.GetProof(number1, number2, winhash, factor)
+	if err != nil {
+		panic(err)
+	}
+	util.PrintJson(proof)
 }
 
 func DoMain() {

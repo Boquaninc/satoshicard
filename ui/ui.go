@@ -11,6 +11,7 @@ import (
 	"satoshicard/conf"
 	"satoshicard/server"
 	"satoshicard/util"
+	"strconv"
 	"strings"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -64,7 +65,8 @@ const (
 	UI_STATE_WAIT_OPEN            UIStateCode = 5
 	UI_STATE_WAIT_CHECK           UIStateCode = 6
 	UI_STATE_WAIT_WIN_OR_LOSE     UIStateCode = 7
-	UI_STATE_WAIT_CLOSE           UIStateCode = 8
+	UI_STATE_WAIT_CLOSE_WIN       UIStateCode = 8
+	UI_STATE_WAIT_CLOSE_LOSE      UIStateCode = 9
 )
 
 type UIState struct {
@@ -75,11 +77,14 @@ type UIState struct {
 type ClientGameContext struct {
 	GensisPreLockingScript []byte
 	GensisPreValue         int64
-	Txid                   string
-	Index                  int
+	GensisPreTxid          string
+	GensisPreIndex         int
+	PlayerIndex            int
 	UnlockScript           []byte
 	Hash                   *big.Int
 	Preimage               *big.Int
+	Number1                *big.Int
+	Number2                *big.Int
 }
 
 type UIContext struct {
@@ -91,6 +96,8 @@ type UIContext struct {
 	GameServer   *server.GameServer
 	PrivateKey   *btcec.PrivateKey
 	GameContext  *ClientGameContext
+	RivalPubkey  *btcec.PublicKey
+	ContractPath string
 }
 
 func NewUIContext(config *conf.Config) *UIContext {
@@ -110,6 +117,7 @@ func NewUIContext(config *conf.Config) *UIContext {
 		PrivateKey:   privateKey,
 		GameContext:  &ClientGameContext{},
 		RpcClient:    NewRpcClient(config.RpcClientConfig),
+		ContractPath: config.ContractPath,
 	}
 	Server := server.NewGameServer(config.Listen, config.ContractPath, ctx.RpcClient, ctx.OnAddParticipant)
 	ctx.GameServer = Server
@@ -171,7 +179,11 @@ func (uictx *UIContext) DoEventHost(*UIEvent) error {
 	}
 	uictx.GameServer.Open()
 	internalClient := client.NewInternalClient(uictx.GameServer)
-	internalClient.Join(uictx.Id)
+	joinResponse, err := internalClient.Join(uictx.Id)
+	if err != nil {
+		return err
+	}
+	uictx.GameContext.PlayerIndex = joinResponse.Index
 	uictx.GameClient = internalClient
 	uictx.SetState(UI_STATE_WAIT_PLAYER, nil)
 	return nil
@@ -187,6 +199,7 @@ func (uictx *UIContext) DoEventJoin(event *UIEvent) error {
 		return err
 	}
 	uictx.GameClient = client
+	uictx.GameContext.PlayerIndex = response.Index
 	uictx.SetState(UI_STATE_WAIT_PREIMAGE_UTXO, []string{response.Rival})
 	return nil
 }
@@ -242,8 +255,8 @@ func (uictx *UIContext) DoEventPreimage(event *UIEvent) error {
 
 	uictx.GameContext.Hash = hash
 	uictx.GameContext.Preimage = preimage
-	uictx.GameContext.Txid = txid.String()
-	uictx.GameContext.Index = 0
+	uictx.GameContext.GensisPreTxid = txid.String()
+	uictx.GameContext.GensisPreIndex = 0
 
 	setUtxoAndHashRequest := &server.SetUtxoAndHashRequest{
 		UserId:   uictx.Id,
@@ -279,8 +292,8 @@ func (uictx *UIContext) DoEventSign(event *UIEvent) error {
 
 	var unlockScript []byte = nil
 	for index, vin := range msgtx.TxIn {
-		if vin.PreviousOutPoint.Hash.String() != uictx.GameContext.Txid ||
-			vin.PreviousOutPoint.Index != uint32(uictx.GameContext.Index) {
+		if vin.PreviousOutPoint.Hash.String() != uictx.GameContext.GensisPreTxid ||
+			vin.PreviousOutPoint.Index != uint32(uictx.GameContext.GensisPreIndex) {
 			continue
 		}
 		unlockScript = util.GetP2PKHUnlockScript(
@@ -323,18 +336,157 @@ func (uictx *UIContext) DoEventPublish(event *UIEvent) error {
 	return nil
 }
 
-func (uictx *UIContext) DoEventOpen() error {
-	if !uictx.CheckStateIn(UI_STATE_WAIT_PUBLISH_OR_OPEN) {
+func (uictx *UIContext) DoEventOpen(event *UIEvent) error {
+	if !uictx.CheckStateIn(UI_STATE_WAIT_PUBLISH_OR_OPEN, UI_STATE_WAIT_OPEN) {
 		return errors.New("command not for now")
 	}
-	panic("todo")
+
+	request := &server.SetPreimageRequest{
+		UserId:   uictx.Id,
+		Preimage: uictx.GameContext.Preimage.String(),
+	}
+	err := uictx.GameClient.SetPreimage(request)
+	if err != nil {
+		return err
+	}
+	uictx.SetState(UI_STATE_WAIT_CHECK, nil)
+	return nil
+
 }
 
-func (uictx *UIContext) DoEventCheck() error {
+func (uictx *UIContext) DoEventCheck(event *UIEvent) error {
 	if !uictx.CheckStateIn(UI_STATE_WAIT_CHECK) {
 		return errors.New("command not for now")
 	}
-	panic("todo")
+
+	request := &server.GetRivalPreimagePubkeyRequest{
+		UserId: uictx.Id,
+	}
+	getRivalPreimageResponse, err := uictx.GameClient.GetRivalPreimage(request)
+	if err != nil {
+		return err
+	}
+
+	pubkeyByte, err := hex.DecodeString(getRivalPreimageResponse.Pubkey)
+	if err != nil {
+		return err
+	}
+	rivalPubkey, err := btcec.ParsePubKey(pubkeyByte, btcec.S256())
+	if err != nil {
+		return err
+	}
+
+	selfPreimage := uictx.GameContext.Preimage
+	rivalPreimage, ok := big.NewInt(0).SetString(getRivalPreimageResponse.Preimage, 10)
+	if !ok {
+		return errors.New("error rival preimage")
+	}
+
+	var number1 *big.Int = nil
+	var number2 *big.Int = nil
+	if uictx.GameContext.PlayerIndex == 0 {
+		number1 = selfPreimage
+		number2 = rivalPreimage
+	} else {
+		number2 = selfPreimage
+		number1 = rivalPreimage
+	}
+
+	cards := util.GetCardStrs(number1, number2)
+
+	selfCards := ""
+	rivalCards := ""
+	if uictx.GameContext.PlayerIndex == 0 {
+		selfCards = cards[0]
+		rivalCards = cards[1]
+	} else {
+		selfCards = cards[1]
+		rivalCards = cards[0]
+	}
+
+	uictx.GameContext.Number1 = number1
+	uictx.GameContext.Number2 = number2
+
+	uictx.RivalPubkey = rivalPubkey
+	uictx.SetState(UI_STATE_WAIT_WIN_OR_LOSE, []string{
+		selfPreimage.String(),
+		selfCards,
+		rivalPreimage.String(),
+		rivalCards,
+	})
+	return nil
+}
+
+func (uictx *UIContext) DoEventWin(event *UIEvent) error {
+	if !uictx.CheckStateIn(UI_STATE_WAIT_WIN_OR_LOSE) {
+		return errors.New("command not for now")
+	}
+
+	request := &server.GetGenesisTxRequest{
+		Sign: true,
+	}
+	getGenesisTxResponse, err := uictx.GameClient.GetGenesisTx(request)
+	if err != nil {
+		return err
+	}
+
+	factor, err := strconv.ParseInt(event.Params, 10, 64)
+	if err != nil {
+		return err
+	}
+
+	buildTxContext := NewBuildTxContext(uictx.RpcClient, uictx.PrivateKey)
+
+	selfAddress := util.PrivateKey2Address(uictx.PrivateKey)
+	selfScript, err := txscript.PayToAddrScript(selfAddress)
+	if err != nil {
+		return err
+	}
+	seflAmount := server.GAMBLING_CAPITAL * (server.MAX_FACTOR + factor)
+	buildTxContext.AddVout(seflAmount, selfScript)
+
+	rivalAddress := util.Pubkey2Address(uictx.RivalPubkey)
+	rivalScript, err := txscript.PayToAddrScript(rivalAddress)
+	if err != nil {
+		return err
+	}
+	rivalAmount := server.GAMBLING_CAPITAL * (server.MAX_FACTOR - factor)
+	buildTxContext.AddVout(rivalAmount, rivalScript)
+
+	genesisMsgTx := util.DeserializeRawTx(getGenesisTxResponse.Rawtx)
+
+	vin := &TxOutPoint{
+		Txid:    genesisMsgTx.TxHash().String(),
+		Index:   TXPOINT_VIN_INDEX,
+		Value:   genesisMsgTx.TxOut[0].Value,
+		Type:    TXPOINT_TYPE_GAMBLING,
+		Script:  genesisMsgTx.TxOut[0].PkScript,
+		Address: "",
+	}
+
+	buildTxContext.AddVin(vin)
+	signGamblingCtx := NewSignGamblingCtx(uictx.ContractPath, factor, uictx.GameContext.Number1, uictx.GameContext.Number2, uictx.GameContext.Hash)
+	buildTxContext.CtxSet[TXPOINT_TYPE_GAMBLING] = signGamblingCtx
+
+	msgTx, err := buildTxContext.SupplementFeeAndSign()
+	if err != nil {
+		panic(err)
+	}
+
+	hash, err := uictx.RpcClient.SendRawTransaction(msgTx, true)
+	if err != nil {
+		panic(err)
+	}
+	uictx.SetState(UI_STATE_WAIT_CLOSE_WIN, []string{hash.String()})
+	return nil
+}
+
+func (uictx *UIContext) DoEventLose(event *UIEvent) error {
+	if !uictx.CheckStateIn(UI_STATE_WAIT_WIN_OR_LOSE) {
+		return errors.New("command not for now")
+	}
+	uictx.SetState(UI_STATE_WAIT_CLOSE_LOSE, nil)
+	return nil
 }
 
 func (uictx *UIContext) DoEvent(event *UIEvent) error {
@@ -351,10 +503,14 @@ func (uictx *UIContext) DoEvent(event *UIEvent) error {
 		return uictx.DoEventSign(event)
 	case EVENT_PUBLISH:
 		return uictx.DoEventPublish(event)
+	case EVENT_OPEN:
+		return uictx.DoEventOpen(event)
+	case EVENT_CHEKC:
+		return uictx.DoEventCheck(event)
 	case EVENT_WIN:
-		panic("todo")
+		return uictx.DoEventWin(event)
 	case EVENT_LOSE:
-		panic("todo")
+		return uictx.DoEventLose(event)
 	default:
 		return errors.New("unknown event")
 	}
@@ -374,12 +530,14 @@ func (uictx *UIContext) HandleState() {
 	case UI_STATE_WAIT_PUBLISH_OR_OPEN:
 		fmt.Printf("> already set sign genesis ,wait other user set done and you may publish or open\n")
 	case UI_STATE_WAIT_OPEN:
-		fmt.Printf("> already open,wait other user open their cards,you may check\n")
+		fmt.Printf("> already publish,wait other user open their cards,you may check\n")
 	case UI_STATE_WAIT_CHECK:
 		fmt.Printf("> already open the cards,wait other user open their cards,you may check\n")
 	case UI_STATE_WAIT_WIN_OR_LOSE:
-		fmt.Printf("> you got card %s,other player got card %s\n", state.Params[0], state.Params[1])
-	case UI_STATE_WAIT_CLOSE:
+		fmt.Printf("> your preimage is %s, got card %s,\n   other player preimage is %s got card %s\n", state.Params[0], state.Params[1], state.Params[2], state.Params[3])
+	case UI_STATE_WAIT_CLOSE_WIN:
+		fmt.Printf("> game over,second txid is %s\n", state.Params[0])
+	case UI_STATE_WAIT_CLOSE_LOSE:
 		fmt.Printf("> game over\n")
 	default:
 		panic("unknown state")

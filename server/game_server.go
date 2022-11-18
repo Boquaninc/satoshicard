@@ -24,20 +24,29 @@ const (
 	SET_UTXO_AND_HASH_URI            = "/set_utxo_and_hash"
 	GET_GENESIS_TX_URI               = "/get_genesis_tx"
 	SET_GENESIS_TX_UNLOCK_SCRIPT_URI = "/set_genesis_tx_unlock_script"
+	PUBLISH_URI                      = "/publish"
+	SET_PREIMAGE_URI                 = "/set_preimage"
+	GET_RIVAL_PREIMAGE_PUBKEY_URI    = "/get_rival_preimage_pubkey"
 )
 
 type Request interface {
 	JoinRequest |
 		SetUtxoAndHashRequest |
 		GetGenesisTxRequest |
-		SetGenesisTxUnlockScriptRequest
+		SetGenesisTxUnlockScriptRequest |
+		PublishRequest |
+		SetPreimageRequest |
+		GetRivalPreimagePubkeyRequest
 }
 
 type Response interface {
 	JoinResponse |
 		SetUtxoAndHashResponse |
 		GetGenesisTxResponse |
-		SetGenesisTxUnlockScriptResponse
+		SetGenesisTxUnlockScriptResponse |
+		PulishResponse |
+		SetPreimageResponse |
+		GetRivalPreimagePubkeyResponse
 }
 
 func HttpAspect[T1 Request, T2 Response](
@@ -136,6 +145,9 @@ func NewGameServer(listen string, contractPath string, rpcClient *rpcclient.Clie
 	http.HandleFunc(SET_UTXO_AND_HASH_URI, HttpAspect(server.SetUtxoAndHashLock))
 	http.HandleFunc(GET_GENESIS_TX_URI, HttpAspect(server.GetGenesisTxLock))
 	http.HandleFunc(SET_GENESIS_TX_UNLOCK_SCRIPT_URI, HttpAspect(server.SetGenesisTxUnlockScriptLock))
+	http.HandleFunc(PUBLISH_URI, HttpAspect(server.PublishLock))
+	http.HandleFunc(SET_PREIMAGE_URI, HttpAspect(server.SetPreimageLock))
+	http.HandleFunc(GET_RIVAL_PREIMAGE_PUBKEY_URI, HttpAspect(server.GetRivalPreimagePubkeyLock))
 	return server
 }
 
@@ -165,6 +177,7 @@ type JoinRequest struct {
 
 type JoinResponse struct {
 	Rival string `json:"rival"`
+	Index int    `json:"index"`
 }
 
 func (gameServer *GameServer) JoinLock(request *JoinRequest) (*JoinResponse, error) {
@@ -190,6 +203,7 @@ func (gameServer *GameServer) JoinLock(request *JoinRequest) (*JoinResponse, err
 	}
 	return &JoinResponse{
 		Rival: rivalUid,
+		Index: len(gameServer.ParticipantContexts) - 1,
 	}, nil
 }
 
@@ -261,10 +275,11 @@ func (gameServer *GameServer) GetGenesisMsgTx(sign bool) (*wire.MsgTx, error) {
 
 	playerContexts := gameServer.ParticipantContexts
 	constructorParams := map[string]scryptlib.ScryptType{
-		"hash1": scryptlib.NewIntFromBigInt(playerContexts[0].Hash),
-		"hash2": scryptlib.NewIntFromBigInt(playerContexts[1].Hash),
-		"user1": scryptlib.NewPubKey(util.ToBecPubkey(playerContexts[0].Pubkey)),
-		"user2": scryptlib.NewPubKey(util.ToBecPubkey(playerContexts[1].Pubkey)),
+		"hash1":     scryptlib.NewIntFromBigInt(playerContexts[0].Hash),
+		"hash2":     scryptlib.NewIntFromBigInt(playerContexts[1].Hash),
+		"maxfactor": scryptlib.NewIntFromBigInt(big.NewInt(MAX_FACTOR)),
+		"user1":     scryptlib.NewPubKey(util.ToBecPubkey(playerContexts[0].Pubkey)),
+		"user2":     scryptlib.NewPubKey(util.ToBecPubkey(playerContexts[1].Pubkey)),
 	}
 	contract := gameServer.Contract
 	err := contract.SetConstructorParams(constructorParams)
@@ -286,7 +301,7 @@ func (gameServer *GameServer) GetGenesisMsgTx(sign bool) (*wire.MsgTx, error) {
 	msgTx := wire.NewMsgTx(2)
 	util.AddVin(msgTx, playerContexts[0].Txid, playerContexts[0].Index, playerContexts[0].UnlockScript)
 	util.AddVin(msgTx, playerContexts[1].Txid, playerContexts[1].Index, playerContexts[1].UnlockScript)
-	util.AddVout(msgTx, scriptByte, GAMBLING_CAPITAL)
+	util.AddVout(msgTx, scriptByte, GAMBLING_CAPITAL*MAX_FACTOR)
 	return msgTx, nil
 }
 
@@ -356,54 +371,48 @@ func (gameServer *GameServer) PublishLock(request *PublishRequest) (*PulishRespo
 	}, nil
 }
 
-func (gameServer *GameServer) SetPreimageLock(uid string, preimageStr string) error {
-	preimage, ok := big.NewInt(0).SetString(preimageStr, 10)
+type SetPreimageRequest struct {
+	UserId   string `json:"user_id"`
+	Preimage string `json:"preimage"`
+}
+
+type SetPreimageResponse struct {
+}
+
+func (gameServer *GameServer) SetPreimageLock(request *SetPreimageRequest) (*SetPreimageResponse, error) {
+	preimage, ok := big.NewInt(0).SetString(request.Preimage, 10)
 	if !ok {
-		return errors.New("error preimage")
+		return nil, errors.New("error preimage")
 	}
 	hash := util.GetHash(preimage)
 	gameServer.L.Lock()
 	defer gameServer.L.Unlock()
-	participantContext, err := gameServer.GetParticipantContext(uid)
+	participantContext, err := gameServer.GetParticipantContext(request.UserId)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if participantContext.Preimage != nil {
-		return errors.New("preimage already set")
+		return nil, errors.New("preimage already set")
 	}
 
 	if participantContext.Hash.Cmp(hash) != 0 {
-		return errors.New("cant be right preimage")
+		return nil, errors.New("cant be right preimage")
 	}
 	participantContext.Preimage = preimage
-	return nil
+	return &SetPreimageResponse{}, nil
 }
 
-type GetRivalPreimageRequest struct {
+type GetRivalPreimagePubkeyRequest struct {
 	UserId string `json:"user_id"`
 }
 
-type GetRivalPreimageResponse struct {
+type GetRivalPreimagePubkeyResponse struct {
 	Preimage string `json:"preimage"`
+	Pubkey   string `json:"pubkey"`
 }
 
-func (gameServer *GameServer) GetRivalPreimageLock(uid string) (*big.Int, error) {
-	gameServer.L.Lock()
-	defer gameServer.L.Unlock()
-	for _, participantContext := range gameServer.ParticipantContexts {
-		if participantContext.Id == uid {
-			continue
-		}
-		if participantContext.Preimage == nil {
-			return nil, errors.New("rival preimage not set")
-		}
-		return participantContext.Preimage, nil
-	}
-	return nil, errors.New("rival not found")
-}
-
-func (gameServer *GameServer) GetRivalPreimage(request *GetRivalPreimageRequest) (*GetRivalPreimageResponse, error) {
+func (gameServer *GameServer) GetRivalPreimagePubkeyLock(request *GetRivalPreimagePubkeyRequest) (*GetRivalPreimagePubkeyResponse, error) {
 	gameServer.L.Lock()
 	defer gameServer.L.Unlock()
 	for _, participantContext := range gameServer.ParticipantContexts {
@@ -413,8 +422,9 @@ func (gameServer *GameServer) GetRivalPreimage(request *GetRivalPreimageRequest)
 		if participantContext.Preimage == nil {
 			return nil, errors.New("rival preimage not set")
 		}
-		return &GetRivalPreimageResponse{
+		return &GetRivalPreimagePubkeyResponse{
 			Preimage: participantContext.Preimage.String(),
+			Pubkey:   hex.EncodeToString(participantContext.Pubkey.SerializeCompressed()),
 		}, nil
 	}
 	return nil, errors.New("preimage not found")

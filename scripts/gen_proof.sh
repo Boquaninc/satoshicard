@@ -2,8 +2,8 @@
 
 set -e
 
-cd circuits
+/Users/nerd/software/zokrates/bin/zokrates compile --debug -i circuits/root.zok
 
-/Users/linxing/.local/bin/zokrates compute-witness -a $1 $2 $3 $4
+/Users/nerd/software/zokrates/bin/zokrates compute-witness -a $1 $2 $3 $4
 
-/Users/linxing/.local/bin/zokrates generate-proof
+/Users/nerd/software/zokrates/bin/zokrates generate-proof

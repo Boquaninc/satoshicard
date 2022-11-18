@@ -2,7 +2,6 @@ package util
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -87,9 +86,7 @@ var CardCode2Str []string = []string{
 }
 
 func GetCardStrs(number1 *big.Int, number2 *big.Int) []string {
-	fmt.Println(number1, number2)
 	cards := GetCards(number1, number2)
-	fmt.Println(cards)
 	cardStrs1 := make([]string, 0, 5)
 	cardStrs2 := make([]string, 0, 5)
 	for i, card := range cards {
@@ -128,15 +125,13 @@ func GetCards(number1 *big.Int, number2 *big.Int) []int {
 }
 
 func GetProof(number1 *big.Int, number2 *big.Int, winHash *big.Int, factor *big.Int) (*Proof, error) {
-
 	cmd := exec.Command("sh", "scripts/gen_proof.sh", number1.String(), number2.String(), winHash.String(), factor.String())
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
 	}
 	log.Println("Computing witness :", string(output))
-
-	content, err := ioutil.ReadFile("./circuits/proof.json")
+	content, err := ioutil.ReadFile("./proof.json")
 	if err != nil {
 		return nil, err
 	}

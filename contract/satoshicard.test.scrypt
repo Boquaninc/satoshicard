@@ -1,0 +1,77 @@
+// import "verifier.scrypt";
+
+type FQ = int;
+
+struct G1Point {
+    FQ x;
+    FQ y;
+}
+
+struct FQ2 {
+    FQ x;
+    FQ y;
+}
+
+struct G2Point {
+    FQ2 x;
+    FQ2 y;
+}
+
+struct Proof {
+    G1Point a;
+    G2Point b;
+    G1Point c;
+}
+
+
+contract Satoshicard {
+
+    int hash1;
+    int hash2;
+    PubKey user1;
+    PubKey user2;
+    int maxfactor;
+
+
+    function verify(int[4] inputs, Proof proof) : bool{
+        require(inputs[0]==22);
+        require(inputs[1]==27);
+        require(inputs[2]==this.hash2);
+        require(inputs[3]==2);
+
+        require(proof.a.x==0x2000976e60b506a8117c764f2ed360b209e3d52c4d4064ef8c56838e2be947fb);
+        require(proof.a.y==0x27e392609187acc7cab26ae58c4e7040cd9b5946b64623ba54988f4d3dd7fe2d);
+        require(proof.b.x.x==0x2fa4d33cf9eed3f2432b1f2ba5406f4343e6d3477dbf548ba4c1e43435642726);
+        require(proof.b.x.y==0x049114c5e823c3aab913645f1fefbb3f3761bea92df21e88d85593f19f90360d);
+        require(proof.b.y.x==0x2931c0d11860f8c8ce31e4a898bfe6eec420cb2fd5121e8b0b19b721459098c3);
+        require(proof.b.y.y==0x1f6351a0aad422219078cbe8414c882e81793b616161e79058907668c14b9eb8);
+        require(proof.c.x==0x269bfe1e07782602d62becc60b7e13cb2fe2cf8447aeb8208d3a6907cb78ff6f);
+        require(proof.c.y==0x28895c70ba51094d39418e63ec294d2f8cbe3d1a959d0dd73eee7423cdb34128);
+        return true;
+    }   
+    public function run(SigHashPreimage txPreimage,Proof proof,int number1,int number2,int winHash,int factor)
+    {
+        require(Tx.checkPreimage(txPreimage));
+        require(this.verify([number1,number2,winHash,factor],proof));
+        PubKey winner=PubKey(b'00');
+        PubKey loser=PubKey(b'00');
+        if(winHash==this.hash1){
+            winner=this.user1;
+            loser=this.user2;
+        }else if (winHash==this.hash1){
+            winner=this.user2;
+            loser=this.user1;
+        }else {
+            require(false);
+        }
+        int baseAmount=SigHash.value(txPreimage)/(2*this.maxfactor);
+        int winnerAmount=baseAmount*(this.maxfactor+factor);
+        int loserAmount=baseAmount*(this.maxfactor-factor);
+        bytes script1 = Utils.buildPublicKeyHashScript(hash160(winner));
+        bytes output1 = Utils.buildOutput(script1,winnerAmount);
+
+        bytes script2 = Utils.buildPublicKeyHashScript(hash160(loser));
+        bytes output2 = Utils.buildOutput(script2, loserAmount);
+        require(hash256(output1+output2) == SigHash.hashOutputs(txPreimage));
+    }
+}

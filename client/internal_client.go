@@ -1,6 +1,8 @@
 package client
 
-import "satoshicard/server"
+import (
+	"satoshicard/server"
+)
 
 type InternalClient struct {
 	GameServer *server.GameServer
@@ -37,4 +39,13 @@ func (client *InternalClient) Publish() (string, error) {
 	request := &server.PublishRequest{}
 	response, err := client.GameServer.PublishLock(request)
 	return response.Txid, err
+}
+
+func (client *InternalClient) SetPreimage(request *server.SetPreimageRequest) error {
+	_, err := client.GameServer.SetPreimageLock(request)
+	return err
+}
+
+func (client *InternalClient) GetRivalPreimage(request *server.GetRivalPreimagePubkeyRequest) (*server.GetRivalPreimagePubkeyResponse, error) {
+	return client.GameServer.GetRivalPreimagePubkeyLock(request)
 }

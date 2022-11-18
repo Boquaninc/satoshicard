@@ -440,3 +440,22 @@ func GetP2PKHUnlockScript(msgTx *wire.MsgTx, index int, key *btcec.PrivateKey, l
 	}
 	return b
 }
+
+type PrivateKey struct {
+	*btcec.PrivateKey
+}
+
+func NewPrivateKey(key string) *PrivateKey {
+	privateKeyByte, err := hex.DecodeString(key)
+	if err != nil {
+		panic(err)
+	}
+	privateKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), privateKeyByte)
+	return &PrivateKey{
+		PrivateKey: privateKey,
+	}
+}
+
+func (PrivateKey *PrivateKey) ToAddress() {
+
+}
