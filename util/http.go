@@ -127,7 +127,7 @@ func DoHttp(method string, url string, header map[string]string, data interface{
 	if err != nil {
 		return nil, err
 	}
-	PrintJson(body)
+	// PrintJson(body)
 	return body, nil
 }
 

@@ -33,7 +33,7 @@ func Test1() {
 
 	preimageEvent := &ui.UIEvent{
 		Event:  ui.EVENT_PREIMAGE,
-		Params: "5",
+		Params: "22",
 	}
 	uictx.EventChannel <- preimageEvent
 
@@ -87,7 +87,7 @@ func Test2() {
 
 	preimageEvent := &ui.UIEvent{
 		Event:  ui.EVENT_PREIMAGE,
-		Params: "11",
+		Params: "27",
 	}
 	uictx.EventChannel <- preimageEvent
 
@@ -115,7 +115,7 @@ func Test2() {
 	WaitInput()
 	winEvent := &ui.UIEvent{
 		Event:  ui.EVENT_WIN,
-		Params: "",
+		Params: "2",
 	}
 	uictx.EventChannel <- winEvent
 }
