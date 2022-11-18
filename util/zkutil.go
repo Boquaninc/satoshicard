@@ -98,7 +98,7 @@ func GetCards(number1 *big.Int, number2 *big.Int) []int {
 		gotOriginBigIndex := seed.Mod(seed, big.NewInt(int64(len(originCards)-1-i)))
 		gotOriginIndex := int(gotOriginBigIndex.Int64())
 		originCards[gotOriginIndex], originCards[len(originCards)-1-i] = originCards[len(originCards)-1-i], originCards[gotOriginIndex]
-		gotCards[i] = originCards[gotOriginIndex]
+		gotCards[i] = originCards[len(originCards)-1-i]
 	}
 	return gotCards
 }
