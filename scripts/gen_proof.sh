@@ -2,10 +2,12 @@
 
 set -e
 
-/Users/nerd/software/zokrates/bin/zokrates compile --debug -i circuits/root.zok
+cd circuits
 
-/Users/nerd/software/zokrates/bin/zokrates setup
+LOCAL_INST_DIR="$HOME/.local/bin"
 
-/Users/nerd/software/zokrates/bin/zokrates compute-witness -a $1 $2 $3 $4
+BIN_NAME="zokrates"
 
-/Users/nerd/software/zokrates/bin/zokrates generate-proof
+$LOCAL_INST_DIR/zokrates compute-witness -a $1 $2 $3 $4
+
+$LOCAL_INST_DIR/zokrates generate-proof
