@@ -122,7 +122,7 @@ func NewUIContext(config *conf.Config) *UIContext {
 	Server := server.NewGameServer(config.Listen, config.ContractPath, ctx.RpcClient, ctx.OnAddParticipant)
 	ctx.GameServer = Server
 	go ctx.ProcessEventLoop()
-	// go ctx.ReadLoop()
+	go ctx.ReadLoop()
 	return ctx
 }
 
