@@ -124,11 +124,11 @@ func (this *SignGamblingCtx) GetProof() (*scryptlib.Struct, error) {
 	// fmt.Println("GetProof 2:", this.Number2)
 	// fmt.Println("GetProof 3:", this.WinHash)
 	// fmt.Println("GetProof 4:", this.Factor)
-	// proof, err := util.GetProof(this.Number1, this.Number2, this.WinHash, this.Factor)
-	// if err != nil {
-	// 	fmt.Println("GetProof -------err:", err)
-	// 	return nil, err
-	// }
+	proof, err := util.GetProof(this.Number1, this.Number2, this.WinHash, this.Factor)
+	if err != nil {
+		// fmt.Println("GetProof -------err:", err)
+		return nil, err
+	}
 	//     {
 	//   "scheme": "g16",
 	//   "curve": "bn128",
@@ -158,25 +158,25 @@ func (this *SignGamblingCtx) GetProof() (*scryptlib.Struct, error) {
 	//   ]
 	// }
 
-	proof := &util.Proof{
-		B: make([][]string, 2),
-	}
-	proof.A = []string{
-		"0x0e8784f99d5b6e507033053f19a123ca9d64813fc75e5bbd8b2af8f935ffa519",
-		"0x127855b55ac5c07308e34ba89edfb0b165153104faaeff6ec2322e100dc5a9be",
-	}
-	proof.B[0] = []string{
-		"0x012e6a9500965a6978bf40118bed2070d3f5c0e3137558bad2aee39d26f3caeb",
-		"0x04d89437deffaca6afa1c93fc85f28882116f6f393650244a610c0277929d1fa",
-	}
-	proof.B[1] = []string{
-		"0x199daacf33cd725852db62534ad9bca8c7e9c46e9daa7b7845c68a6630f40102",
-		"0x2afe1ae6f1d9b38fdcee4a3b35432fc6bda637c4616d82d1f7cbad29f9910b34",
-	}
-	proof.C = []string{
-		"0x0fbed969c53a96819d2d2435676187a0a44a3e8d1ec8aab8a0a52982715b2c87",
-		"0x2c0525f000183cccfe74e1348cb997a49301229726a836bc5fbd6cb286b9ccf5",
-	}
+	// proof := &util.Proof{
+	// 	B: make([][]string, 2),
+	// }
+	// proof.A = []string{
+	// 	"0x0e8784f99d5b6e507033053f19a123ca9d64813fc75e5bbd8b2af8f935ffa519",
+	// 	"0x127855b55ac5c07308e34ba89edfb0b165153104faaeff6ec2322e100dc5a9be",
+	// }
+	// proof.B[0] = []string{
+	// 	"0x012e6a9500965a6978bf40118bed2070d3f5c0e3137558bad2aee39d26f3caeb",
+	// 	"0x04d89437deffaca6afa1c93fc85f28882116f6f393650244a610c0277929d1fa",
+	// }
+	// proof.B[1] = []string{
+	// 	"0x199daacf33cd725852db62534ad9bca8c7e9c46e9daa7b7845c68a6630f40102",
+	// 	"0x2afe1ae6f1d9b38fdcee4a3b35432fc6bda637c4616d82d1f7cbad29f9910b34",
+	// }
+	// proof.C = []string{
+	// 	"0x0fbed969c53a96819d2d2435676187a0a44a3e8d1ec8aab8a0a52982715b2c87",
+	// 	"0x2c0525f000183cccfe74e1348cb997a49301229726a836bc5fbd6cb286b9ccf5",
+	// }
 	// util.PrintJson(proof)
 	return NewProofScryptlibStructFromProof(proof), nil
 }
