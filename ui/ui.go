@@ -17,6 +17,7 @@ import (
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/rpcclient"
 	"github.com/btcsuite/btcd/txscript"
+	"github.com/btcsuite/btcd/wire"
 )
 
 func NewRpcClient(RpcClientConfig *conf.RpcClientConfig) *rpcclient.Client {
@@ -100,7 +101,7 @@ type UIContext struct {
 	ContractPath string
 }
 
-func NewUIContext(config *conf.Config) *UIContext {
+func NewUIContext(config *conf.Config, mode int) *UIContext {
 	id := util.RandStringBytesMaskImprSrcUnsafe(8)
 
 	privateKeyByte, err := hex.DecodeString(config.Key)
@@ -122,7 +123,9 @@ func NewUIContext(config *conf.Config) *UIContext {
 	Server := server.NewGameServer(config.Listen, config.ContractPath, ctx.RpcClient, ctx.OnAddParticipant)
 	ctx.GameServer = Server
 	go ctx.ProcessEventLoop()
-	go ctx.ReadLoop()
+	if mode == 0 {
+		go ctx.ReadLoop()
+	}
 	return ctx
 }
 
@@ -435,7 +438,13 @@ func (uictx *UIContext) DoEventWin(event *UIEvent) error {
 		return err
 	}
 
-	buildTxContext := NewBuildTxContext(uictx.RpcClient, uictx.PrivateKey)
+	txCtx := &util.TxContext{
+		RpcClient:               uictx.RpcClient,
+		LockTime:                0,
+		Vins:                    make([]*util.VinContext, 0, 2),
+		Vouts:                   make([]*wire.TxOut, 0, 1),
+		SupplementFeePrivateKey: uictx.PrivateKey,
+	}
 
 	selfAddress := util.PrivateKey2Address(uictx.PrivateKey)
 	selfScript, err := txscript.PayToAddrScript(selfAddress)
@@ -443,7 +452,7 @@ func (uictx *UIContext) DoEventWin(event *UIEvent) error {
 		return err
 	}
 	seflAmount := server.GAMBLING_CAPITAL * (server.MAX_FACTOR + factor)
-	buildTxContext.AddVout(seflAmount, selfScript)
+	txCtx.AddVout(seflAmount, selfScript)
 
 	rivalAddress := util.Pubkey2Address(uictx.RivalPubkey)
 	rivalScript, err := txscript.PayToAddrScript(rivalAddress)
@@ -451,30 +460,22 @@ func (uictx *UIContext) DoEventWin(event *UIEvent) error {
 		return err
 	}
 	rivalAmount := server.GAMBLING_CAPITAL * (server.MAX_FACTOR - factor)
-	buildTxContext.AddVout(rivalAmount, rivalScript)
+	txCtx.AddVout(rivalAmount, rivalScript)
 
 	genesisMsgTx := util.DeserializeRawTx(getGenesisTxResponse.Rawtx)
 
-	vin := &TxOutPoint{
-		Txid:    genesisMsgTx.TxHash().String(),
-		Index:   0,
-		Value:   genesisMsgTx.TxOut[0].Value,
-		Type:    TXPOINT_TYPE_GAMBLING,
-		Script:  genesisMsgTx.TxOut[0].PkScript,
-		Address: "",
+	vin := &util.TxInPoint{
+		PreTxid:    genesisMsgTx.TxHash().String(),
+		PreIndex:   0,
+		Value:      genesisMsgTx.TxOut[0].Value,
+		LockScript: genesisMsgTx.TxOut[0].PkScript,
+		HashType:   txscript.SigHashAll | util.SigHashForkID,
 	}
 
-	buildTxContext.AddVin(vin)
-	signGamblingCtx := NewSignGamblingCtx(uictx.ContractPath, factor, uictx.GameContext.Number1, uictx.GameContext.Number2, uictx.GameContext.Hash)
-	buildTxContext.CtxSet[TXPOINT_TYPE_GAMBLING] = signGamblingCtx
+	niuniuV1UnlockCtx := util.NewNiuNiuV1UnlockContext(uictx.ContractPath, factor, uictx.GameContext.Number1, uictx.GameContext.Number2, uictx.GameContext.Hash)
+	txCtx.AddVin(vin, niuniuV1UnlockCtx)
 
-	msgTx, err := buildTxContext.SupplementFeeAndSign()
-	if err != nil {
-		panic(err)
-	}
-	for _, vin := range msgTx.TxIn {
-		fmt.Println("DoEventWin :", vin.PreviousOutPoint)
-	}
+	msgTx := txCtx.SupplementFeeAndBuildByFaucet()
 
 	hash, err := uictx.RpcClient.SendRawTransaction(msgTx, true)
 	if err != nil {

@@ -22,7 +22,7 @@ func WaitInput() {
 
 func Test1() {
 	config := conf.GetConfig()
-	uictx := ui.NewUIContext(config)
+	uictx := ui.NewUIContext(config, 1)
 	hostEvent := &ui.UIEvent{
 		Event:  ui.EVENT_HOST,
 		Params: "",
@@ -76,7 +76,7 @@ func Test1() {
 
 func Test2() {
 	config := conf.GetConfig()
-	uictx := ui.NewUIContext(config)
+	uictx := ui.NewUIContext(config, 2)
 	joinEvent := &ui.UIEvent{
 		Event:  ui.EVENT_JOIN,
 		Params: "127.0.0.1:10001",
@@ -144,7 +144,7 @@ func Test3() {
 
 func DoMain() {
 	config := conf.GetConfig()
-	ui.NewUIContext(config)
+	ui.NewUIContext(config, 0)
 }
 
 func main() {
