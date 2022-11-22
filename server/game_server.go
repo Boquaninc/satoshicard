@@ -110,15 +110,17 @@ const (
 )
 
 type GameServer struct {
-	Id                  string
-	ParticipantContexts []*ParticipantContext
-	L                   sync.Locker
-	Contract            *scryptlib.Contract
-	ContractPath        string
-	RpcClient           *rpcclient.Client
-	OnAddParticipant    func(string)
-	Server              *http.Server
-	GenesisTxid         string
+	Id                      string
+	ParticipantContexts     []*ParticipantContext
+	L                       sync.Locker
+	Contract                *scryptlib.Contract
+	ContractPath            string
+	RpcClient               *rpcclient.Client
+	OnAddParticipant        func(string)
+	Server                  *http.Server
+	GenesisTxid             string
+	UnSignGenesisMsgTxCache *wire.MsgTx
+	SignGenesisMsgTxCache   *wire.MsgTx
 }
 
 func NewGameServer(listen string, contractPath string, rpcClient *rpcclient.Client, OnAddParticipant func(string)) *GameServer {
@@ -258,30 +260,7 @@ type GetGenesisTxResponse struct {
 	Rawtx string `json:"rawtx"`
 }
 
-func (gameServer *GameServer) GetGenesisMsgTx(sign bool) (*wire.MsgTx, error) {
-	readyCount := 0
-	participantContexts := gameServer.ParticipantContexts
-	for _, participantContext := range participantContexts {
-		if participantContext.Hash != nil &&
-			participantContext.Pubkey != nil &&
-			participantContext.Index != -1 &&
-			participantContext.Txid != "" && (!sign || participantContext.UnlockScript != nil) {
-			readyCount++
-		}
-	}
-	if readyCount < 2 {
-		return nil, errors.New("not ready")
-	}
-
-	playerContexts := gameServer.ParticipantContexts
-	constructorParams := map[string]scryptlib.ScryptType{
-		"hash1":     scryptlib.NewIntFromBigInt(playerContexts[0].Hash),
-		"hash2":     scryptlib.NewIntFromBigInt(playerContexts[1].Hash),
-		"maxfactor": scryptlib.NewIntFromBigInt(big.NewInt(MAX_FACTOR)),
-		"user1":     scryptlib.NewPubKey(util.ToBecPubkey(playerContexts[0].Pubkey)),
-		"user2":     scryptlib.NewPubKey(util.ToBecPubkey(playerContexts[1].Pubkey)),
-	}
-	contract := gameServer.Contract
+func GetConstructorLockScript(constructorParams map[string]scryptlib.ScryptType, contract *scryptlib.Contract) []byte {
 	err := contract.SetConstructorParams(constructorParams)
 	if err != nil {
 		panic(err)
@@ -297,11 +276,49 @@ func (gameServer *GameServer) GetGenesisMsgTx(sign bool) (*wire.MsgTx, error) {
 	if err != nil {
 		panic(err)
 	}
+	return scriptByte
+}
 
+func (gameServer *GameServer) GetGenesisMsgTx(sign bool) (*wire.MsgTx, error) {
+	readyCount := 0
+	participantContexts := gameServer.ParticipantContexts
+	for _, participantContext := range participantContexts {
+		if participantContext.Hash != nil &&
+			participantContext.Pubkey != nil &&
+			participantContext.Index != -1 &&
+			participantContext.Txid != "" && (!sign || participantContext.UnlockScript != nil) {
+			readyCount++
+		}
+	}
+	if readyCount < 2 {
+		return nil, errors.New("not ready")
+	}
+
+	if sign && gameServer.SignGenesisMsgTxCache != nil {
+		return gameServer.SignGenesisMsgTxCache, nil
+	} else if !sign && gameServer.UnSignGenesisMsgTxCache != nil {
+		return gameServer.UnSignGenesisMsgTxCache, nil
+	}
+
+	playerContexts := gameServer.ParticipantContexts
+	gameConstructorParams := map[string]scryptlib.ScryptType{
+		"hash1":     scryptlib.NewIntFromBigInt(playerContexts[0].Hash),
+		"hash2":     scryptlib.NewIntFromBigInt(playerContexts[1].Hash),
+		"maxfactor": scryptlib.NewIntFromBigInt(big.NewInt(MAX_FACTOR)),
+		"user1":     scryptlib.NewPubKey(util.ToBecPubkey(playerContexts[0].Pubkey)),
+		"user2":     scryptlib.NewPubKey(util.ToBecPubkey(playerContexts[1].Pubkey)),
+	}
+
+	scriptByte := GetConstructorLockScript(gameConstructorParams, gameServer.Contract)
 	msgTx := wire.NewMsgTx(2)
 	util.AddVin(msgTx, playerContexts[0].Txid, playerContexts[0].Index, playerContexts[0].UnlockScript)
 	util.AddVin(msgTx, playerContexts[1].Txid, playerContexts[1].Index, playerContexts[1].UnlockScript)
 	util.AddVout(msgTx, scriptByte, GAMBLING_CAPITAL*MAX_FACTOR*2)
+	if sign {
+		gameServer.SignGenesisMsgTxCache = msgTx
+	} else {
+		gameServer.UnSignGenesisMsgTxCache = msgTx
+	}
 	return msgTx, nil
 }
 
