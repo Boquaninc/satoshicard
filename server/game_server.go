@@ -329,7 +329,7 @@ func (gameServer *GameServer) GetGenesisMsgTx(sign bool) (*wire.MsgTx, error) {
 		return gameServer.SignGenesisMsgTxCache, nil
 	}
 
-	if gameServer.UnSignGenesisMsgTxCache != nil {
+	if !sign && gameServer.UnSignGenesisMsgTxCache != nil {
 		return gameServer.UnSignGenesisMsgTxCache, nil
 	}
 
@@ -366,8 +366,8 @@ func (gameServer *GameServer) GetGenesisMsgTx(sign bool) (*wire.MsgTx, error) {
 	lockScriptByte2 := GetConstructorLockScript(lockConstructorParams2, gameServer.LockContract)
 	util.AddVout(msgTx, lockScriptByte2, EACH_LOCK_AMOUNT)
 
-	util.AddVin(msgTx, playerContexts[0].Txid, playerContexts[0].Index, playerContexts[0].UnlockScript)
-	util.AddVin(msgTx, playerContexts[1].Txid, playerContexts[1].Index, playerContexts[1].UnlockScript)
+	util.AddVin(msgTx, playerContexts[0].Txid, playerContexts[0].Index, nil)
+	util.AddVin(msgTx, playerContexts[1].Txid, playerContexts[1].Index, nil)
 	gameServer.UnSignGenesisMsgTxCache = msgTx
 	return gameServer.UnSignGenesisMsgTxCache, nil
 }
