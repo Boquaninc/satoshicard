@@ -16,7 +16,8 @@ contract Satoshicard {
     }
 
 
-    public function open(int preimage){
+    public function open(int preimage,Sig sig){
+        require(checkSig(sig, this.pubkey));
         require(Mimc7.hash(preimage,0)==this.preimageHash);
     }
 }

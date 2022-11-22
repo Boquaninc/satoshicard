@@ -375,7 +375,7 @@ func (uictx *UIContext) DoEventOpen(event *UIEvent) error {
 	}
 	txCtx := util.NewTxContext()
 
-	hashTimeLockOpenUnlockContext := util.NewHashTimeLockOpenUnlockContext(uictx.LockContractPath, uictx.GameContext.Preimage)
+	hashTimeLockOpenUnlockContext := util.NewHashTimeLockOpenUnlockContext(uictx.LockContractPath, uictx.GameContext.Preimage, uictx.PrivateKey)
 	txCtx.AddVin(txInPoint, hashTimeLockOpenUnlockContext)
 
 	address := util.PrivateKey2Address(uictx.PrivateKey)
