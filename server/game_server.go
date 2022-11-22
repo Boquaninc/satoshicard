@@ -355,7 +355,8 @@ func (gameServer *GameServer) GetGenesisMsgTx(sign bool) (*wire.MsgTx, error) {
 	lockConstructorParams1 := map[string]scryptlib.ScryptType{
 		"matureTime":   scryptlib.NewInt(matureTime),
 		"preimageHash": scryptlib.NewIntFromBigInt(playerContexts[0].Hash),
-		"pubkey":       scryptlib.NewPubKey(util.ToBecPubkey(playerContexts[1].Pubkey)),
+		"pubkey":       scryptlib.NewPubKey(util.ToBecPubkey(playerContexts[0].Pubkey)),
+		"rivalPubkey":  scryptlib.NewPubKey(util.ToBecPubkey(playerContexts[1].Pubkey)),
 	}
 	lockScriptByte1 := GetConstructorLockScript(lockConstructorParams1, gameServer.LockContract)
 	util.AddVout(msgTx, lockScriptByte1, EACH_LOCK_AMOUNT)
@@ -363,7 +364,8 @@ func (gameServer *GameServer) GetGenesisMsgTx(sign bool) (*wire.MsgTx, error) {
 	lockConstructorParams2 := map[string]scryptlib.ScryptType{
 		"matureTime":   scryptlib.NewInt(matureTime),
 		"preimageHash": scryptlib.NewIntFromBigInt(playerContexts[1].Hash),
-		"pubkey":       scryptlib.NewPubKey(util.ToBecPubkey(playerContexts[0].Pubkey)),
+		"pubkey":       scryptlib.NewPubKey(util.ToBecPubkey(playerContexts[1].Pubkey)),
+		"rivalPubkey":  scryptlib.NewPubKey(util.ToBecPubkey(playerContexts[0].Pubkey)),
 	}
 
 	lockScriptByte2 := GetConstructorLockScript(lockConstructorParams2, gameServer.LockContract)

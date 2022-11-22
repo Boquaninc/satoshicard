@@ -4,6 +4,7 @@ contract Satoshicard {
 
     int matureTime;
     int preimageHash;
+    PubKey rivalPubkey;
     PubKey pubkey;
 
     public function overtime(SigHashPreimage txPreimage,Sig sig)
@@ -11,7 +12,7 @@ contract Satoshicard {
         require(Tx.checkPreimage(txPreimage));
         int timeLock=SigHash.nLocktime(txPreimage);
         require(timeLock>=this.matureTime);
-        require(checkSig(sig, this.pubkey));
+        require(checkSig(sig, this.rivalPubkey));
     }
 
 
