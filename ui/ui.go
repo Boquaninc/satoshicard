@@ -89,16 +89,18 @@ type ClientGameContext struct {
 }
 
 type UIContext struct {
-	Id           string
-	State        *UIState
-	EventChannel chan *UIEvent
-	GameClient   client.Client
-	RpcClient    *rpcclient.Client
-	GameServer   *server.GameServer
-	PrivateKey   *btcec.PrivateKey
-	GameContext  *ClientGameContext
-	RivalPubkey  *btcec.PublicKey
-	ContractPath string
+	Id                string
+	State             *UIState
+	EventChannel      chan *UIEvent
+	GameClient        client.Client
+	RpcClient         *rpcclient.Client
+	GameServer        *server.GameServer
+	PrivateKey        *btcec.PrivateKey
+	GameContext       *ClientGameContext
+	RivalPubkey       *btcec.PublicKey
+	GameContractPath  string
+	LockContractPath  string
+	GenesisMsgTxCache *wire.MsgTx
 }
 
 func NewUIContext(config *conf.Config, mode int) *UIContext {
@@ -111,14 +113,15 @@ func NewUIContext(config *conf.Config, mode int) *UIContext {
 	privateKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), privateKeyByte)
 
 	ctx := &UIContext{
-		Id:           id,
-		EventChannel: make(chan *UIEvent),
-		State:        &UIState{Code: UI_STATE_WAIT_DECIDE_MODE},
-		GameClient:   nil,
-		PrivateKey:   privateKey,
-		GameContext:  &ClientGameContext{},
-		RpcClient:    NewRpcClient(config.RpcClientConfig),
-		ContractPath: config.GameContractPath,
+		Id:               id,
+		EventChannel:     make(chan *UIEvent),
+		State:            &UIState{Code: UI_STATE_WAIT_DECIDE_MODE},
+		GameClient:       nil,
+		PrivateKey:       privateKey,
+		GameContext:      &ClientGameContext{},
+		RpcClient:        NewRpcClient(config.RpcClientConfig),
+		LockContractPath: config.LockContractPath,
+		GameContractPath: config.GameContractPath,
 	}
 	Server := server.NewGameServer(config.Listen, config.GameContractPath, config.LockContractPath, ctx.RpcClient, ctx.OnAddParticipant)
 	ctx.GameServer = Server
@@ -334,8 +337,7 @@ func (uictx *UIContext) DoEventPublish(event *UIEvent) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(txid)
-	uictx.SetState(UI_STATE_WAIT_OPEN, nil)
+	uictx.SetState(UI_STATE_WAIT_OPEN, []string{txid})
 	return nil
 }
 
@@ -344,15 +346,63 @@ func (uictx *UIContext) DoEventOpen(event *UIEvent) error {
 		return errors.New("command not for now")
 	}
 
-	request := &server.SetPreimageRequest{
+	getGenesisTxRequest := &server.GetGenesisTxRequest{
+		Sign: true,
+	}
+	getGenesisTxResponse, err := uictx.GameClient.GetGenesisTx(getGenesisTxRequest)
+	if err != nil {
+		panic(err)
+	}
+
+	genesisMsgTx := util.DeserializeRawTx(getGenesisTxResponse.Rawtx)
+	uictx.GenesisMsgTxCache = genesisMsgTx
+
+	index := int64(-1)
+	if uictx.GameContext.PlayerIndex == 0 {
+		index = 1
+	} else if uictx.GameContext.PlayerIndex == 1 {
+		index = 2
+	}
+
+	vout := genesisMsgTx.TxOut[index]
+
+	txInPoint := &util.TxInPoint{
+		PreTxid:    genesisMsgTx.TxHash().String(),
+		PreIndex:   index,
+		Value:      vout.Value,
+		LockScript: vout.PkScript,
+		HashType:   txscript.SigHashAll | util.SigHashForkID,
+	}
+	txCtx := util.NewTxContext()
+
+	hashTimeLockOpenUnlockContext := util.NewHashTimeLockOpenUnlockContext(uictx.LockContractPath, uictx.GameContext.Preimage)
+	txCtx.AddVin(txInPoint, hashTimeLockOpenUnlockContext)
+
+	address := util.PrivateKey2Address(uictx.PrivateKey)
+
+	pkScript, err := txscript.PayToAddrScript(address)
+	if err != nil {
+		panic(err)
+	}
+
+	txCtx.AddVout(server.OPEN_AMOUNT, pkScript)
+
+	openMsgTx := txCtx.Build()
+
+	openMsgTxid, err := uictx.RpcClient.SendRawTransaction(openMsgTx, false)
+	if err != nil {
+		panic(err)
+	}
+
+	setPreimageRequest := &server.SetPreimageRequest{
 		UserId:   uictx.Id,
 		Preimage: uictx.GameContext.Preimage.String(),
 	}
-	err := uictx.GameClient.SetPreimage(request)
+	err = uictx.GameClient.SetPreimage(setPreimageRequest)
 	if err != nil {
 		return err
 	}
-	uictx.SetState(UI_STATE_WAIT_CHECK, nil)
+	uictx.SetState(UI_STATE_WAIT_CHECK, []string{openMsgTxid.String()})
 	return nil
 
 }
@@ -472,7 +522,7 @@ func (uictx *UIContext) DoEventWin(event *UIEvent) error {
 		HashType:   txscript.SigHashAll | util.SigHashForkID,
 	}
 
-	niuniuV1UnlockCtx := util.NewNiuNiuV1UnlockContext(uictx.ContractPath, factor, uictx.GameContext.Number1, uictx.GameContext.Number2, uictx.GameContext.Hash)
+	niuniuV1UnlockCtx := util.NewNiuNiuV1UnlockContext(uictx.GameContractPath, factor, uictx.GameContext.Number1, uictx.GameContext.Number2, uictx.GameContext.Hash)
 	txCtx.AddVin(vin, niuniuV1UnlockCtx)
 
 	msgTx := txCtx.SupplementFeeAndBuildByFaucet()
@@ -534,9 +584,9 @@ func (uictx *UIContext) HandleState() {
 	case UI_STATE_WAIT_PUBLISH_OR_OPEN:
 		fmt.Printf("> already set sign genesis ,wait other user set done and you may publish or open\n")
 	case UI_STATE_WAIT_OPEN:
-		fmt.Printf("> already publish,wait other user open their cards,you may check\n")
+		fmt.Printf("> already publish %s,wait other user open their cards,you may check\n", state.Params[0])
 	case UI_STATE_WAIT_CHECK:
-		fmt.Printf("> already open the cards,wait other user open their cards,you may check\n")
+		fmt.Printf("> already open the cards %s,wait other user open their cards,you may check\n", state.Params[0])
 	case UI_STATE_WAIT_WIN_OR_LOSE:
 		fmt.Printf("> your preimage is %s, got card %s,\n   other player preimage is %s got card %s\n", state.Params[0], state.Params[1], state.Params[2], state.Params[3])
 	case UI_STATE_WAIT_CLOSE_WIN:

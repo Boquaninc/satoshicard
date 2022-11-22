@@ -136,7 +136,7 @@ func (ctx *NiuNiuV1UnlockContext) SetUnlockScript(msgTx *wire.MsgTx, index int, 
 		panic(err)
 	}
 	method := "run"
-	ctx.Contract.SetPublicFunctionParams(
+	err = ctx.Contract.SetPublicFunctionParams(
 		method,
 		map[string]scryptlib.ScryptType{
 			"txPreimage": scryptlib.NewSigHashPreimage(preImage),
@@ -146,7 +146,9 @@ func (ctx *NiuNiuV1UnlockContext) SetUnlockScript(msgTx *wire.MsgTx, index int, 
 			"winHash":    scryptlib.NewIntFromBigInt(ctx.WinHash),
 			"factor":     scryptlib.NewIntFromBigInt(ctx.Factor),
 		})
-
+	if err != nil {
+		panic(err)
+	}
 	unlockScript, err := ctx.Contract.GetUnlockingScript(method)
 	if err != nil {
 		panic(err)

@@ -62,6 +62,13 @@ type TxContext struct {
 	SupplementFeePrivateKey *btcec.PrivateKey
 }
 
+func NewTxContext() *TxContext {
+	return &TxContext{
+		Vins:  make([]*VinContext, 0, 1),
+		Vouts: make([]*wire.TxOut, 0, 1),
+	}
+}
+
 func (ctx *TxContext) AddVin(txInPoint *TxInPoint, unlockVinContext UnlockContext) {
 	vinCtx := NewVinContext(txInPoint, unlockVinContext)
 	ctx.Vins = append(ctx.Vins, vinCtx)

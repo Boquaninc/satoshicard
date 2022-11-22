@@ -20,14 +20,18 @@ import (
 const (
 	GAMBLING_CAPITAL = 10000000
 	MAX_FACTOR       = 10
-	EACH_FEE         = 1000000
+	EACH_GENESIS_FEE = 1000000
+
+	OPEN_FEE = 10000
 
 	EACH_GAME_AMOUNT = GAMBLING_CAPITAL * MAX_FACTOR
 	EACH_LOCK_AMOUNT = GAMBLING_CAPITAL * MAX_FACTOR
 
+	OPEN_AMOUNT = EACH_LOCK_AMOUNT - OPEN_FEE
+
 	GAME_VOUT_AMOUNT = EACH_GAME_AMOUNT * 2
 
-	GENESIS_FAUCET_AMOUNT = EACH_GAME_AMOUNT + EACH_LOCK_AMOUNT + EACH_FEE
+	GENESIS_FAUCET_AMOUNT = EACH_GAME_AMOUNT + EACH_LOCK_AMOUNT + EACH_GENESIS_FEE
 
 	JOIN_URI                         = "/join"
 	SET_UTXO_AND_HASH_URI            = "/set_utxo_and_hash"
@@ -353,7 +357,6 @@ func (gameServer *GameServer) GetGenesisMsgTx(sign bool) (*wire.MsgTx, error) {
 		"preimageHash": scryptlib.NewIntFromBigInt(playerContexts[0].Hash),
 		"pubkey":       scryptlib.NewPubKey(util.ToBecPubkey(playerContexts[1].Pubkey)),
 	}
-
 	lockScriptByte1 := GetConstructorLockScript(lockConstructorParams1, gameServer.LockContract)
 	util.AddVout(msgTx, lockScriptByte1, EACH_LOCK_AMOUNT)
 

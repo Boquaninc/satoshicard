@@ -19,6 +19,7 @@ import (
 	"github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/libsv/go-bk/bec"
+	"github.com/sCrypt-Inc/go-scryptlib"
 	"github.com/tyler-smith/go-bip39"
 )
 
@@ -441,21 +442,15 @@ func GetP2PKHUnlockScript(msgTx *wire.MsgTx, index int, key *btcec.PrivateKey, l
 	return b
 }
 
-type PrivateKey struct {
-	*btcec.PrivateKey
-}
-
-func NewPrivateKey(key string) *PrivateKey {
-	privateKeyByte, err := hex.DecodeString(key)
+func LoadDesc(path string) *scryptlib.Contract {
+	desc, err := scryptlib.LoadDesc(path)
 	if err != nil {
 		panic(err)
 	}
-	privateKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), privateKeyByte)
-	return &PrivateKey{
-		PrivateKey: privateKey,
+
+	contract, err := scryptlib.NewContractFromDesc(desc)
+	if err != nil {
+		panic(err)
 	}
-}
-
-func (PrivateKey *PrivateKey) ToAddress() {
-
+	return &contract
 }

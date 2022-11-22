@@ -1,13 +1,18 @@
 package main
 
 import (
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"math/big"
 	"satoshicard/conf"
+	"satoshicard/server"
 	"satoshicard/ui"
 	"satoshicard/util"
 	"time"
+
+	"github.com/btcsuite/btcd/btcec"
+	"github.com/sCrypt-Inc/go-scryptlib"
 )
 
 type Flags struct {
@@ -121,7 +126,7 @@ func Test2() {
 }
 
 func Test3() {
-	number1 := big.NewInt(2)
+	number1 := big.NewInt(22)
 	number2 := big.NewInt(27)
 	winhash := util.GetHash(number2)
 	factor := big.NewInt(2)
@@ -140,6 +145,62 @@ func Test3() {
 		panic(err)
 	}
 	util.PrintJson(proof2)
+}
+
+func Test4() {
+	config := conf.GetConfig()
+	contract := util.LoadDesc(config.LockContractPath)
+	fmt.Println("Test4 1")
+	number := big.NewInt(27)
+	numberHash := util.GetHash(number)
+
+	matureTime := time.Now().Unix() + 60*60
+	fmt.Println("Test4 2")
+	privateKeyByte, err := hex.DecodeString(config.Key)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Test4 3")
+	privateKey, pubkey := btcec.PrivKeyFromBytes(btcec.S256(), privateKeyByte)
+	lockConstructorParams1 := map[string]scryptlib.ScryptType{
+		"matureTime":   scryptlib.NewInt(matureTime),
+		"preimageHash": scryptlib.NewIntFromBigInt(numberHash),
+		"pubkey":       scryptlib.NewPubKey(util.ToBecPubkey(pubkey)),
+	}
+	fmt.Println("Test4 4")
+	genesisLockScript := server.GetConstructorLockScript(lockConstructorParams1, contract)
+	genesisTxCtx := util.NewTxContext()
+	genesisTxCtx.SupplementFeePrivateKey = privateKey
+	rpcClient := ui.NewRpcClient(config.RpcClientConfig)
+	genesisTxCtx.RpcClient = rpcClient
+	genesisAmount := int64(10000)
+	genesisTxCtx.AddVout(genesisAmount, genesisLockScript)
+	fmt.Println("Test4 5")
+	genesisTx := genesisTxCtx.SupplementFeeAndBuildByFaucet()
+	fmt.Println("Test4 6")
+	txid, err := genesisTxCtx.RpcClient.SendRawTransaction(genesisTx, true)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Test4 7:", txid.String())
+
+	// txInPoint := &util.TxInPoint{
+	// 	PreTxid:    genesisTx.TxHash().String(),
+	// 	PreIndex:   0,
+	// 	Value:      genesisAmount,
+	// 	LockScript: genesisTx.TxOut[0].PkScript,
+	// 	HashType:   txscript.SigHashAll | util.SigHashForkID,
+	// }
+
+	// openTxCtx := util.NewTxContext()
+
+	// addr := util.PrivateKey2Address(privateKey)
+
+	// pkScript, err := txscript.PayToAddrScript(addr)
+	// if err != nil {
+	// 	panic(err)
+	// }
+
 }
 
 func DoMain() {
@@ -164,6 +225,8 @@ func main() {
 		Test2()
 	case 3:
 		Test3()
+	case 4:
+		Test4()
 	default:
 		panic("not support mode")
 	}
