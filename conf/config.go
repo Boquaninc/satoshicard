@@ -6,10 +6,11 @@ type RpcClientConfig struct {
 	Password string
 }
 type Config struct {
-	RpcClientConfig *RpcClientConfig
-	Listen          string
-	ContractPath    string
-	Key             string
+	RpcClientConfig  *RpcClientConfig
+	Listen           string
+	GameContractPath string
+	LockContractPath string
+	Key              string
 }
 
 var gConfig *Config = nil

@@ -118,9 +118,9 @@ func NewUIContext(config *conf.Config, mode int) *UIContext {
 		PrivateKey:   privateKey,
 		GameContext:  &ClientGameContext{},
 		RpcClient:    NewRpcClient(config.RpcClientConfig),
-		ContractPath: config.ContractPath,
+		ContractPath: config.GameContractPath,
 	}
-	Server := server.NewGameServer(config.Listen, config.ContractPath, ctx.RpcClient, ctx.OnAddParticipant)
+	Server := server.NewGameServer(config.Listen, config.GameContractPath, config.LockContractPath, ctx.RpcClient, ctx.OnAddParticipant)
 	ctx.GameServer = Server
 	go ctx.ProcessEventLoop()
 	if mode == 0 {
@@ -230,7 +230,7 @@ func (uictx *UIContext) DoEventPreimage(event *UIEvent) error {
 
 	addr := util.Pubkey2Address(pubkey)
 
-	txid, err := uictx.RpcClient.SendToAddress(addr, server.GAMBLING_CAPITAL*server.MAX_FACTOR+server.EACH_FEE)
+	txid, err := uictx.RpcClient.SendToAddress(addr, server.GENESIS_FAUCET_AMOUNT)
 	if err != nil {
 		return err
 	}

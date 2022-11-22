@@ -38,6 +38,9 @@ func (client *InternalClient) SetGenesisTxUnlockScript(request *server.SetGenesi
 func (client *InternalClient) Publish() (string, error) {
 	request := &server.PublishRequest{}
 	response, err := client.GameServer.PublishLock(request)
+	if err != nil {
+		return "", err
+	}
 	return response.Txid, err
 }
 

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"satoshicard/util"
 	"sync"
+	"time"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/rpcclient"
@@ -17,9 +18,17 @@ import (
 )
 
 const (
-	GAMBLING_CAPITAL                 = 10000000
-	MAX_FACTOR                       = 10
-	EACH_FEE                         = 1000000
+	GAMBLING_CAPITAL = 10000000
+	MAX_FACTOR       = 10
+	EACH_FEE         = 1000000
+
+	EACH_GAME_AMOUNT = GAMBLING_CAPITAL * MAX_FACTOR
+	EACH_LOCK_AMOUNT = GAMBLING_CAPITAL * MAX_FACTOR
+
+	GAME_VOUT_AMOUNT = EACH_GAME_AMOUNT * 2
+
+	GENESIS_FAUCET_AMOUNT = EACH_GAME_AMOUNT + EACH_LOCK_AMOUNT + EACH_FEE
+
 	JOIN_URI                         = "/join"
 	SET_UTXO_AND_HASH_URI            = "/set_utxo_and_hash"
 	GET_GENESIS_TX_URI               = "/get_genesis_tx"
@@ -113,8 +122,10 @@ type GameServer struct {
 	Id                      string
 	ParticipantContexts     []*ParticipantContext
 	L                       sync.Locker
-	Contract                *scryptlib.Contract
-	ContractPath            string
+	GameContract            *scryptlib.Contract
+	GameContractPath        string
+	LockContract            *scryptlib.Contract
+	LockContractPath        string
 	RpcClient               *rpcclient.Client
 	OnAddParticipant        func(string)
 	Server                  *http.Server
@@ -123,21 +134,33 @@ type GameServer struct {
 	SignGenesisMsgTxCache   *wire.MsgTx
 }
 
-func NewGameServer(listen string, contractPath string, rpcClient *rpcclient.Client, OnAddParticipant func(string)) *GameServer {
-	desc, err := scryptlib.LoadDesc(contractPath)
+func NewGameServer(listen string, gameContractPath string, lockContractPath string, rpcClient *rpcclient.Client, OnAddParticipant func(string)) *GameServer {
+	gameDesc, err := scryptlib.LoadDesc(gameContractPath)
 	if err != nil {
 		panic(err)
 	}
 
-	contract, err := scryptlib.NewContractFromDesc(desc)
+	gameContract, err := scryptlib.NewContractFromDesc(gameDesc)
+	if err != nil {
+		panic(err)
+	}
+
+	lcokDesc, err := scryptlib.LoadDesc(lockContractPath)
+	if err != nil {
+		panic(err)
+	}
+
+	lockContract, err := scryptlib.NewContractFromDesc(lcokDesc)
 	if err != nil {
 		panic(err)
 	}
 	server := &GameServer{
 		Id:                  util.RandStringBytesMaskImprSrcUnsafe(8),
 		ParticipantContexts: []*ParticipantContext{},
-		Contract:            &contract,
-		ContractPath:        contractPath,
+		GameContract:        &gameContract,
+		GameContractPath:    gameContractPath,
+		LockContract:        &lockContract,
+		LockContractPath:    lockContractPath,
 		L:                   &sync.Mutex{},
 		OnAddParticipant:    OnAddParticipant,
 		Server:              &http.Server{Addr: listen},
@@ -296,11 +319,23 @@ func (gameServer *GameServer) GetGenesisMsgTx(sign bool) (*wire.MsgTx, error) {
 
 	if sign && gameServer.SignGenesisMsgTxCache != nil {
 		return gameServer.SignGenesisMsgTxCache, nil
-	} else if !sign && gameServer.UnSignGenesisMsgTxCache != nil {
+	}
+
+	if sign && gameServer.SignGenesisMsgTxCache == nil {
+		msgTx := gameServer.UnSignGenesisMsgTxCache.Copy()
+		msgTx.TxIn[0].SignatureScript = gameServer.ParticipantContexts[0].UnlockScript
+		msgTx.TxIn[1].SignatureScript = gameServer.ParticipantContexts[1].UnlockScript
+		gameServer.SignGenesisMsgTxCache = msgTx
+		return gameServer.SignGenesisMsgTxCache, nil
+	}
+
+	if gameServer.UnSignGenesisMsgTxCache != nil {
 		return gameServer.UnSignGenesisMsgTxCache, nil
 	}
 
 	playerContexts := gameServer.ParticipantContexts
+	msgTx := wire.NewMsgTx(2)
+
 	gameConstructorParams := map[string]scryptlib.ScryptType{
 		"hash1":     scryptlib.NewIntFromBigInt(playerContexts[0].Hash),
 		"hash2":     scryptlib.NewIntFromBigInt(playerContexts[1].Hash),
@@ -309,17 +344,32 @@ func (gameServer *GameServer) GetGenesisMsgTx(sign bool) (*wire.MsgTx, error) {
 		"user2":     scryptlib.NewPubKey(util.ToBecPubkey(playerContexts[1].Pubkey)),
 	}
 
-	scriptByte := GetConstructorLockScript(gameConstructorParams, gameServer.Contract)
-	msgTx := wire.NewMsgTx(2)
+	gameScriptByte := GetConstructorLockScript(gameConstructorParams, gameServer.GameContract)
+	util.AddVout(msgTx, gameScriptByte, GAME_VOUT_AMOUNT)
+
+	matureTime := time.Now().Unix() + 60*60
+	lockConstructorParams1 := map[string]scryptlib.ScryptType{
+		"matureTime":   scryptlib.NewInt(matureTime),
+		"preimageHash": scryptlib.NewIntFromBigInt(playerContexts[0].Hash),
+		"pubkey":       scryptlib.NewPubKey(util.ToBecPubkey(playerContexts[1].Pubkey)),
+	}
+
+	lockScriptByte1 := GetConstructorLockScript(lockConstructorParams1, gameServer.LockContract)
+	util.AddVout(msgTx, lockScriptByte1, EACH_LOCK_AMOUNT)
+
+	lockConstructorParams2 := map[string]scryptlib.ScryptType{
+		"matureTime":   scryptlib.NewInt(matureTime),
+		"preimageHash": scryptlib.NewIntFromBigInt(playerContexts[1].Hash),
+		"pubkey":       scryptlib.NewPubKey(util.ToBecPubkey(playerContexts[0].Pubkey)),
+	}
+
+	lockScriptByte2 := GetConstructorLockScript(lockConstructorParams2, gameServer.LockContract)
+	util.AddVout(msgTx, lockScriptByte2, EACH_LOCK_AMOUNT)
+
 	util.AddVin(msgTx, playerContexts[0].Txid, playerContexts[0].Index, playerContexts[0].UnlockScript)
 	util.AddVin(msgTx, playerContexts[1].Txid, playerContexts[1].Index, playerContexts[1].UnlockScript)
-	util.AddVout(msgTx, scriptByte, GAMBLING_CAPITAL*MAX_FACTOR*2)
-	if sign {
-		gameServer.SignGenesisMsgTxCache = msgTx
-	} else {
-		gameServer.UnSignGenesisMsgTxCache = msgTx
-	}
-	return msgTx, nil
+	gameServer.UnSignGenesisMsgTxCache = msgTx
+	return gameServer.UnSignGenesisMsgTxCache, nil
 }
 
 func (gameServer *GameServer) GetGenesisMsgTxLock(sign bool) (*wire.MsgTx, error) {
