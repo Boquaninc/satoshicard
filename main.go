@@ -111,18 +111,25 @@ func Test2() {
 	uictx.EventChannel <- openEvent
 
 	WaitInput()
-	checkEvent := &ui.UIEvent{
-		Event:  ui.EVENT_CHEKC,
+	takedepositEvent := &ui.UIEvent{
+		Event:  ui.EVENT_TAKEDEPOSIT,
 		Params: "",
 	}
-	uictx.EventChannel <- checkEvent
+	uictx.EventChannel <- takedepositEvent
 
-	WaitInput()
-	winEvent := &ui.UIEvent{
-		Event:  ui.EVENT_WIN,
-		Params: "2",
-	}
-	uictx.EventChannel <- winEvent
+	// WaitInput()
+	// checkEvent := &ui.UIEvent{
+	// 	Event:  ui.EVENT_CHEKC,
+	// 	Params: "",
+	// }
+	// uictx.EventChannel <- checkEvent
+
+	// WaitInput()
+	// winEvent := &ui.UIEvent{
+	// 	Event:  ui.EVENT_WIN,
+	// 	Params: "2",
+	// }
+	// uictx.EventChannel <- winEvent
 }
 
 func Test3() {

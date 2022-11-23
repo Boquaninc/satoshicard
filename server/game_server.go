@@ -24,6 +24,8 @@ const (
 
 	OPEN_FEE = 10000
 
+	MATURE_TIME = 5
+
 	EACH_GAME_AMOUNT = GAMBLING_CAPITAL * MAX_FACTOR
 	EACH_LOCK_AMOUNT = GAMBLING_CAPITAL * MAX_FACTOR
 
@@ -351,7 +353,7 @@ func (gameServer *GameServer) GetGenesisMsgTx(sign bool) (*wire.MsgTx, error) {
 	gameScriptByte := GetConstructorLockScript(gameConstructorParams, gameServer.GameContract)
 	util.AddVout(msgTx, gameScriptByte, GAME_VOUT_AMOUNT)
 
-	matureTime := time.Now().Unix() + 60*60
+	matureTime := time.Now().Unix() + MATURE_TIME
 	lockConstructorParams1 := map[string]scryptlib.ScryptType{
 		"matureTime":   scryptlib.NewInt(matureTime),
 		"preimageHash": scryptlib.NewIntFromBigInt(playerContexts[0].Hash),

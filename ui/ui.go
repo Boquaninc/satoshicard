@@ -13,6 +13,7 @@ import (
 	"satoshicard/util"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/rpcclient"
@@ -43,31 +44,33 @@ type UIEvent struct {
 }
 
 const (
-	EVENT_HOST     Event = "host"
-	EVENT_JOIN     Event = "join"
-	EVENT_JOINED   Event = "joined"
-	EVENT_PREIMAGE Event = "preimage"
-	EVENT_SIGN     Event = "sign"
-	EVENT_PUBLISH  Event = "publish"
-	EVENT_OPEN     Event = "open"
-	EVENT_CHEKC    Event = "check"
-	EVENT_WIN      Event = "win"
-	EVENT_LOSE     Event = "lose"
+	EVENT_HOST        Event = "host"
+	EVENT_JOIN        Event = "join"
+	EVENT_JOINED      Event = "joined"
+	EVENT_PREIMAGE    Event = "preimage"
+	EVENT_SIGN        Event = "sign"
+	EVENT_PUBLISH     Event = "publish"
+	EVENT_OPEN        Event = "open"
+	EVENT_TAKEDEPOSIT Event = "takedeposit"
+	EVENT_CHEKC       Event = "check"
+	EVENT_WIN         Event = "win"
+	EVENT_LOSE        Event = "lose"
 )
 
 type UIStateCode int
 
 const (
-	UI_STATE_WAIT_DECIDE_MODE     UIStateCode = 0
-	UI_STATE_WAIT_PLAYER          UIStateCode = 1
-	UI_STATE_WAIT_PREIMAGE_UTXO   UIStateCode = 2
-	UI_STATE_WAIT_SIGN            UIStateCode = 3
-	UI_STATE_WAIT_PUBLISH_OR_OPEN UIStateCode = 4
-	UI_STATE_WAIT_OPEN            UIStateCode = 5
-	UI_STATE_WAIT_CHECK           UIStateCode = 6
-	UI_STATE_WAIT_WIN_OR_LOSE     UIStateCode = 7
-	UI_STATE_WAIT_CLOSE_WIN       UIStateCode = 8
-	UI_STATE_WAIT_CLOSE_LOSE      UIStateCode = 9
+	UI_STATE_WAIT_DECIDE_MODE           UIStateCode = 0
+	UI_STATE_WAIT_PLAYER                UIStateCode = 1
+	UI_STATE_WAIT_PREIMAGE_UTXO         UIStateCode = 2
+	UI_STATE_WAIT_SIGN                  UIStateCode = 3
+	UI_STATE_WAIT_PUBLISH_OR_OPEN       UIStateCode = 4
+	UI_STATE_WAIT_OPEN                  UIStateCode = 5
+	UI_STATE_WAIT_CHECK_OR_TAKE_DEPOSIT UIStateCode = 6
+	UI_STATE_WAIT_WIN_OR_LOSE           UIStateCode = 7
+	UI_STATE_WAIT_CLOSE_WIN             UIStateCode = 8
+	UI_STATE_WAIT_CLOSE_LOSE            UIStateCode = 9
+	UI_STATE_WAIT_CLOSE_WIN2            UIStateCode = 10
 )
 
 type UIState struct {
@@ -402,13 +405,58 @@ func (uictx *UIContext) DoEventOpen(event *UIEvent) error {
 	if err != nil {
 		return err
 	}
-	uictx.SetState(UI_STATE_WAIT_CHECK, []string{openMsgTxid.String()})
+	uictx.SetState(UI_STATE_WAIT_CHECK_OR_TAKE_DEPOSIT, []string{openMsgTxid.String()})
 	return nil
+}
 
+func (uictx *UIContext) DoEventTakeDeposit(event *UIEvent) error {
+	if !uictx.CheckStateIn(UI_STATE_WAIT_CHECK_OR_TAKE_DEPOSIT) {
+		return errors.New("command not for now")
+	}
+	genesisMsgTx := uictx.GenesisMsgTxCache
+
+	index := int64(-1)
+	if uictx.GameContext.PlayerIndex == 0 {
+		index = 2
+	} else if uictx.GameContext.PlayerIndex == 1 {
+		index = 1
+	}
+	vout := genesisMsgTx.TxOut[index]
+	txInPoint := &util.TxInPoint{
+		PreTxid:    genesisMsgTx.TxHash().String(),
+		PreIndex:   index,
+		Value:      vout.Value,
+		LockScript: vout.PkScript,
+		HashType:   txscript.SigHashAll | util.SigHashForkID,
+	}
+	txCtx := util.NewTxContext()
+	txCtx.RpcClient = uictx.RpcClient
+	txCtx.LockTime = time.Now().Unix()
+
+	hashTimeLockOverTimeContext := util.NewHashTimeLockOverTimeContext(uictx.LockContractPath, uictx.PrivateKey)
+	txCtx.AddVin(txInPoint, hashTimeLockOverTimeContext)
+
+	address := util.PrivateKey2Address(uictx.PrivateKey)
+
+	pkScript, err := txscript.PayToAddrScript(address)
+	if err != nil {
+		panic(err)
+	}
+
+	txCtx.AddVout(server.OPEN_AMOUNT, pkScript)
+
+	openMsgTx := txCtx.Build()
+
+	openMsgTxid, err := uictx.RpcClient.SendRawTransaction(openMsgTx, false)
+	if err != nil {
+		panic(err)
+	}
+	uictx.SetState(UI_STATE_WAIT_CLOSE_WIN2, []string{openMsgTxid.String()})
+	return nil
 }
 
 func (uictx *UIContext) DoEventCheck(event *UIEvent) error {
-	if !uictx.CheckStateIn(UI_STATE_WAIT_CHECK) {
+	if !uictx.CheckStateIn(UI_STATE_WAIT_CHECK_OR_TAKE_DEPOSIT) {
 		return errors.New("command not for now")
 	}
 
@@ -475,13 +523,16 @@ func (uictx *UIContext) DoEventWin(event *UIEvent) error {
 		return errors.New("command not for now")
 	}
 
-	request := &server.GetGenesisTxRequest{
-		Sign: true,
-	}
-	getGenesisTxResponse, err := uictx.GameClient.GetGenesisTx(request)
-	if err != nil {
-		return err
-	}
+	// request := &server.GetGenesisTxRequest{
+	// 	Sign: true,
+	// }
+
+	genesisMsgTx := uictx.GenesisMsgTxCache
+	// getGenesisTxResponse, err := uictx.GameClient.GetGenesisTx(request)
+	// if err != nil {
+	// 	return err
+	// }
+	// genesisMsgTx := util.DeserializeRawTx(getGenesisTxResponse.Rawtx)
 
 	factor, err := strconv.ParseInt(event.Params, 10, 64)
 	if err != nil {
@@ -511,8 +562,6 @@ func (uictx *UIContext) DoEventWin(event *UIEvent) error {
 	}
 	rivalAmount := server.GAMBLING_CAPITAL * (server.MAX_FACTOR - factor)
 	txCtx.AddVout(rivalAmount, rivalScript)
-
-	genesisMsgTx := util.DeserializeRawTx(getGenesisTxResponse.Rawtx)
 
 	vin := &util.TxInPoint{
 		PreTxid:    genesisMsgTx.TxHash().String(),
@@ -559,6 +608,8 @@ func (uictx *UIContext) DoEvent(event *UIEvent) error {
 		return uictx.DoEventPublish(event)
 	case EVENT_OPEN:
 		return uictx.DoEventOpen(event)
+	case EVENT_TAKEDEPOSIT:
+		return uictx.DoEventTakeDeposit(event)
 	case EVENT_CHEKC:
 		return uictx.DoEventCheck(event)
 	case EVENT_WIN:
@@ -574,6 +625,18 @@ func (uictx *UIContext) HandleState() {
 	state := uictx.State
 	switch state.Code {
 	case UI_STATE_WAIT_DECIDE_MODE:
+		fmt.Printf("> command list:\n")
+		fmt.Printf("	host\n")
+		fmt.Printf("	join\n")
+		fmt.Printf("	joined\n")
+		fmt.Printf("	preimage\n")
+		fmt.Printf("	sign\n")
+		fmt.Printf("	publish\n")
+		fmt.Printf("	open\n")
+		fmt.Printf("	takedeposit\n")
+		fmt.Printf("	check\n")
+		fmt.Printf("	win\n")
+		fmt.Printf("	lose\n")
 		fmt.Printf("> join a game or host a game\n")
 	case UI_STATE_WAIT_PLAYER:
 		fmt.Printf("> host a game successful,now please wait for another player\n")
@@ -585,14 +648,16 @@ func (uictx *UIContext) HandleState() {
 		fmt.Printf("> already set sign genesis ,wait other user set done and you may publish or open\n")
 	case UI_STATE_WAIT_OPEN:
 		fmt.Printf("> already publish %s,wait other user open their cards,you may check\n", state.Params[0])
-	case UI_STATE_WAIT_CHECK:
+	case UI_STATE_WAIT_CHECK_OR_TAKE_DEPOSIT:
 		fmt.Printf("> already open the cards %s,wait other user open their cards,you may check\n", state.Params[0])
 	case UI_STATE_WAIT_WIN_OR_LOSE:
 		fmt.Printf("> your preimage is %s, got card %s,\n   other player preimage is %s got card %s\n", state.Params[0], state.Params[1], state.Params[2], state.Params[3])
 	case UI_STATE_WAIT_CLOSE_WIN:
-		fmt.Printf("> game over,second txid is %s\n", state.Params[0])
+		fmt.Printf("> game over,you win,second txid is %s\n", state.Params[0])
+	case UI_STATE_WAIT_CLOSE_WIN2:
+		fmt.Printf("> game over,rival quit,second txid is %s\n", state.Params[0])
 	case UI_STATE_WAIT_CLOSE_LOSE:
-		fmt.Printf("> game over\n")
+		fmt.Printf("> game over you lose\n")
 	default:
 		panic("unknown state")
 	}
