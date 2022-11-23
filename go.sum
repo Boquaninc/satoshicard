@@ -2,6 +2,8 @@ g.mempool.com/3rds/btcd v0.0.0-20210105041900-20dbf124da32 h1:9KWpbqZmdC3JDguszT
 g.mempool.com/3rds/btcd v0.0.0-20210105041900-20dbf124da32/go.mod h1:nNOO5AiVLDMKbsLP1Uv/F7Uwu4Cl09SjPaAJF1mHbm8=
 g.mempool.com/3rds/btcutil v0.0.0-20200525032747-a3435748dbe8 h1:gX+s50Z/5KtNYa/7saA7u4O4NFXEH252USwQSa6sNyE=
 g.mempool.com/3rds/btcutil v0.0.0-20200525032747-a3435748dbe8/go.mod h1:Gl7nq4gwTs2ic/nHn4ERxVuVdZhALW4gp7GzFUv6NpY=
+g.mempool.com/3rds/go-scryptlib v0.0.0-20221123093952-fa72125994d5 h1:mDV0UB0IAqeMdyKQqFWtXri3LlaZI4SZFrvMZSR8h2c=
+g.mempool.com/3rds/go-scryptlib v0.0.0-20221123093952-fa72125994d5/go.mod h1:w2CoLLgbt9v6+m7HlI5tg70+C/tpHx/yKMLfoboLWrk=
 github.com/aead/siphash v1.0.1/go.mod h1:Nywa3cDsYNNK3gaciGTWPwHt0wlpNV15vwmswBAUSII=
 github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f h1:bAs4lUbRJpnnkd9VhRV3jjAVU7DJVjMaK+IsvSeZvFo=
 github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f/go.mod h1:TdznJufoqS23FtqVCzL0ZqgP5MqXbb4fg/WgDys70nA=
@@ -28,8 +30,6 @@ github.com/leanovate/gopter v0.2.9 h1:fQjYxZaynp97ozCzfOyOuAGOU4aU/z37zf/tOujFk7
 github.com/leanovate/gopter v0.2.9/go.mod h1:U2L/78B+KVFIx2VmW6onHJQzXtFb+p5y3y2Sh+Jxxv8=
 github.com/libsv/go-bk v0.1.6 h1:c9CiT5+64HRDbzxPl1v/oiFmbvWZTuUYqywCf+MBs/c=
 github.com/libsv/go-bk v0.1.6/go.mod h1:khJboDoH18FPUaZlzRFKzlVN84d4YfdmlDtdX4LAjQA=
-github.com/libsv/go-bt/v2 v2.1.0-beta.4 h1:eLp2XKPRnVrcoiGpjK9fsiTK8OT103LNvZ7VUC4mH20=
-github.com/libsv/go-bt/v2 v2.1.0-beta.4/go.mod h1:KbBf6ugGNMtVwtCSUtlSAHoVhbAie4hu2VM97d1ZL8I=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo v1.7.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/gomega v1.4.3/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
