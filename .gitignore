@@ -2,9 +2,4 @@ out_backup
 satoshicard
 *tmp*
 .DS_Store
-out.wtns
-proof.json
-proving.key
-verification.key
-witness
 out

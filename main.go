@@ -110,26 +110,26 @@ func Test2() {
 	}
 	uictx.EventChannel <- openEvent
 
-	WaitInput()
-	takedepositEvent := &ui.UIEvent{
-		Event:  ui.EVENT_TAKEDEPOSIT,
-		Params: "",
-	}
-	uictx.EventChannel <- takedepositEvent
-
 	// WaitInput()
-	// checkEvent := &ui.UIEvent{
-	// 	Event:  ui.EVENT_CHEKC,
+	// takedepositEvent := &ui.UIEvent{
+	// 	Event:  ui.EVENT_TAKEDEPOSIT,
 	// 	Params: "",
 	// }
-	// uictx.EventChannel <- checkEvent
+	// uictx.EventChannel <- takedepositEvent
 
-	// WaitInput()
-	// winEvent := &ui.UIEvent{
-	// 	Event:  ui.EVENT_WIN,
-	// 	Params: "2",
-	// }
-	// uictx.EventChannel <- winEvent
+	WaitInput()
+	checkEvent := &ui.UIEvent{
+		Event:  ui.EVENT_CHEKC,
+		Params: "",
+	}
+	uictx.EventChannel <- checkEvent
+
+	WaitInput()
+	winEvent := &ui.UIEvent{
+		Event:  ui.EVENT_WIN,
+		Params: "2",
+	}
+	uictx.EventChannel <- winEvent
 }
 
 func Test3() {
@@ -184,6 +184,20 @@ func Test4() {
 		panic(err)
 	}
 	fmt.Println("Test4 7:", txid.String())
+
+}
+
+func Test5() {
+	// pri1, err := ecdsa.GenerateKey(btcec.S256(), rand.Reader)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// pub1 := pri1.PublicKey
+	// pri2, err := ecdsa.GenerateKey(btcec.S256(), rand.Reader)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// pub2 := pri2.PublicKey
 
 }
 
