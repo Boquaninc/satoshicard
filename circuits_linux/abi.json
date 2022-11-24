@@ -1,0 +1,30 @@
+{
+  "inputs": [
+    {
+      "name": "n1",
+      "public": false,
+      "type": "field"
+    },
+    {
+      "name": "n2",
+      "public": false,
+      "type": "field"
+    },
+    {
+      "name": "winHash",
+      "public": true,
+      "type": "field"
+    },
+    {
+      "name": "multiple",
+      "public": true,
+      "type": "field"
+    }
+  ],
+  "output": {
+    "type": "tuple",
+    "components": {
+      "elements": []
+    }
+  }
+}
