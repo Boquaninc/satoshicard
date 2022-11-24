@@ -65,28 +65,35 @@ type Response interface {
 }
 
 func HttpAspect[T1 Request, T2 Response](
-	handler func(request *T1) (*T2, error),
+	handler func(request *T1) *T2,
 ) func(rsp http.ResponseWriter, req *http.Request) {
 	return func(rsp http.ResponseWriter, req *http.Request) {
-		request := new(T1)
-		body, err := ioutil.ReadAll(req.Body)
-		if err != nil {
-			panic(err)
-		}
-		if len(body) == 0 {
-			body = []byte("{}")
-		}
-		err = json.Unmarshal(body, request)
-		if err != nil {
-			return
-		}
-		response, err := handler(request)
-		if err != nil {
-			rsp.Write(util.MakeHttpJsonResponseByError(err, nil))
-			return
-		}
-		rsp.Write(util.MakeHttpJsonResponseByInterface(response))
-		return
+		util.Try(
+			func() {
+				request := new(T1)
+				body, err := ioutil.ReadAll(req.Body)
+				util.PanicIfErr(err, err)
+				if len(body) == 0 {
+					body = []byte("{}")
+				}
+				err = json.Unmarshal(body, request)
+				util.PanicIfErr(err, err)
+				response := handler(request)
+				rsp.Write(util.MakeHttpJsonResponseByInterface(response))
+				return
+			},
+			func(i interface{}) {
+				switch t := i.(type) {
+				case error:
+					rsp.Write(util.MakeHttpJsonResponseByError(t, nil))
+				case string:
+					rsp.Write(util.MakeHttpJsonResponseByError(errors.New(t), nil))
+				default:
+					rsp.Write(util.MakeHttpJsonResponseByError(errors.New("unknown err"), nil))
+				}
+				return
+			},
+		)
 	}
 }
 
@@ -182,13 +189,13 @@ func NewGameServer(listen string, gameContractPath string, lockContractPath stri
 	return server
 }
 
-func (gameServer *GameServer) GetParticipantContext(id string) (*ParticipantContext, error) {
+func (gameServer *GameServer) GetParticipantContext(id string) *ParticipantContext {
 	for _, ParticipantContext := range gameServer.ParticipantContexts {
 		if ParticipantContext.Id == id {
-			return ParticipantContext, nil
+			return ParticipantContext
 		}
 	}
-	return nil, errors.New("user not found")
+	panic("user not found")
 }
 
 func (gameServer *GameServer) Close() {
@@ -211,19 +218,19 @@ type JoinResponse struct {
 	Index int    `json:"index"`
 }
 
-func (gameServer *GameServer) JoinLock(request *JoinRequest) (*JoinResponse, error) {
+func (gameServer *GameServer) JoinLock(request *JoinRequest) *JoinResponse {
 	if request.Id == "" {
-		return nil, errors.New("empty uid")
+		panic(errors.New("empty uid"))
 	}
 	gameServer.L.Lock()
 	defer gameServer.L.Unlock()
 	if len(gameServer.ParticipantContexts) >= 2 {
-		return nil, errors.New("room already full")
+		panic(errors.New("room already full"))
 	}
 	rivalUid := ""
 	for _, participantContext := range gameServer.ParticipantContexts {
 		if participantContext.Id == request.Id {
-			return nil, errors.New("already in room")
+			panic(errors.New("already in room"))
 		}
 		rivalUid = participantContext.Id
 	}
@@ -235,7 +242,7 @@ func (gameServer *GameServer) JoinLock(request *JoinRequest) (*JoinResponse, err
 	return &JoinResponse{
 		Rival: rivalUid,
 		Index: len(gameServer.ParticipantContexts) - 1,
-	}, nil
+	}
 }
 
 type SetUtxoAndHashRequest struct {
@@ -249,36 +256,25 @@ type SetUtxoAndHashRequest struct {
 type SetUtxoAndHashResponse struct {
 }
 
-func (gameServer *GameServer) SetUtxoAndHashLock(request *SetUtxoAndHashRequest) (*SetUtxoAndHashResponse, error) {
+func (gameServer *GameServer) SetUtxoAndHashLock(request *SetUtxoAndHashRequest) *SetUtxoAndHashResponse {
 	gameServer.L.Lock()
 	defer gameServer.L.Unlock()
-	participantContext, err := gameServer.GetParticipantContext(request.UserId)
-	if err != nil {
-		return nil, err
-	}
-	if participantContext.Txid != "" {
-		return nil, errors.New("step1 info already set")
-	}
+	participantContext := gameServer.GetParticipantContext(request.UserId)
+	util.PanicIfTrue(participantContext.Txid != "", "step1 info already set")
 
 	pubkeyByte, err := hex.DecodeString(request.Pubkey)
-	if err != nil {
-		return nil, err
-	}
+	util.PanicIfErr(err, err)
 	pubkey, err := btcec.ParsePubKey(pubkeyByte, btcec.S256())
-	if err != nil {
-		return nil, err
-	}
+	util.PanicIfErr(err, err)
 
 	hash, ok := big.NewInt(0).SetString(request.Hash, 10)
-	if !ok {
-		return nil, errors.New("error hash")
-	}
+	util.PanicIfTrue(!ok, "err hash")
 
 	participantContext.Txid = request.Pretxid
 	participantContext.Index = request.Preindex
 	participantContext.Pubkey = pubkey
 	participantContext.Hash = hash
-	return &SetUtxoAndHashResponse{}, nil
+	return &SetUtxoAndHashResponse{}
 }
 
 type GetGenesisTxRequest struct {
@@ -308,7 +304,7 @@ func GetConstructorLockScript(constructorParams map[string]scryptlib.ScryptType,
 	return scriptByte
 }
 
-func (gameServer *GameServer) GetGenesisMsgTx(sign bool) (*wire.MsgTx, error) {
+func (gameServer *GameServer) GetGenesisMsgTx(sign bool) *wire.MsgTx {
 	readyCount := 0
 	participantContexts := gameServer.ParticipantContexts
 	for _, participantContext := range participantContexts {
@@ -319,12 +315,10 @@ func (gameServer *GameServer) GetGenesisMsgTx(sign bool) (*wire.MsgTx, error) {
 			readyCount++
 		}
 	}
-	if readyCount < 2 {
-		return nil, errors.New("not ready")
-	}
+	util.PanicIfTrue(readyCount < 2, errors.New("not ready"))
 
 	if sign && gameServer.SignGenesisMsgTxCache != nil {
-		return gameServer.SignGenesisMsgTxCache, nil
+		return gameServer.SignGenesisMsgTxCache
 	}
 
 	if sign && gameServer.SignGenesisMsgTxCache == nil {
@@ -332,11 +326,11 @@ func (gameServer *GameServer) GetGenesisMsgTx(sign bool) (*wire.MsgTx, error) {
 		msgTx.TxIn[0].SignatureScript = gameServer.ParticipantContexts[0].UnlockScript
 		msgTx.TxIn[1].SignatureScript = gameServer.ParticipantContexts[1].UnlockScript
 		gameServer.SignGenesisMsgTxCache = msgTx
-		return gameServer.SignGenesisMsgTxCache, nil
+		return gameServer.SignGenesisMsgTxCache
 	}
 
 	if !sign && gameServer.UnSignGenesisMsgTxCache != nil {
-		return gameServer.UnSignGenesisMsgTxCache, nil
+		return gameServer.UnSignGenesisMsgTxCache
 	}
 
 	playerContexts := gameServer.ParticipantContexts
@@ -376,23 +370,20 @@ func (gameServer *GameServer) GetGenesisMsgTx(sign bool) (*wire.MsgTx, error) {
 	util.AddVin(msgTx, playerContexts[0].Txid, playerContexts[0].Index, nil)
 	util.AddVin(msgTx, playerContexts[1].Txid, playerContexts[1].Index, nil)
 	gameServer.UnSignGenesisMsgTxCache = msgTx
-	return gameServer.UnSignGenesisMsgTxCache, nil
+	return gameServer.UnSignGenesisMsgTxCache
 }
 
-func (gameServer *GameServer) GetGenesisMsgTxLock(sign bool) (*wire.MsgTx, error) {
+func (gameServer *GameServer) GetGenesisMsgTxLock(sign bool) *wire.MsgTx {
 	gameServer.L.Lock()
 	defer gameServer.L.Unlock()
 	return gameServer.GetGenesisMsgTx(sign)
 }
 
-func (gameServer *GameServer) GetGenesisTxLock(request *GetGenesisTxRequest) (*GetGenesisTxResponse, error) {
-	msgTx, err := gameServer.GetGenesisMsgTxLock(request.Sign)
-	if err != nil {
-		return nil, err
-	}
+func (gameServer *GameServer) GetGenesisTxLock(request *GetGenesisTxRequest) *GetGenesisTxResponse {
+	msgTx := gameServer.GetGenesisMsgTxLock(request.Sign)
 	return &GetGenesisTxResponse{
 		Rawtx: util.SeserializeMsgTx(msgTx),
-	}, nil
+	}
 }
 
 type SetGenesisTxUnlockScriptRequest struct {
@@ -403,22 +394,17 @@ type SetGenesisTxUnlockScriptRequest struct {
 type SetGenesisTxUnlockScriptResponse struct {
 }
 
-func (gameServer *GameServer) SetGenesisTxUnlockScriptLock(request *SetGenesisTxUnlockScriptRequest) (*SetGenesisTxUnlockScriptResponse, error) {
+func (gameServer *GameServer) SetGenesisTxUnlockScriptLock(request *SetGenesisTxUnlockScriptRequest) *SetGenesisTxUnlockScriptResponse {
 	unlockScrip, err := hex.DecodeString(request.UnlockScriptHex)
-	if err != nil {
-		return nil, err
-	}
+	util.PanicIfErr(err, err)
 	gameServer.L.Lock()
 	defer gameServer.L.Unlock()
-	participantContext, err := gameServer.GetParticipantContext(request.UserId)
-	if err != nil {
-		return nil, err
-	}
+	participantContext := gameServer.GetParticipantContext(request.UserId)
 	if participantContext.UnlockScript != nil {
-		return nil, errors.New("unlockScript already set")
+		panic(errors.New("unlockScript already set"))
 	}
 	participantContext.UnlockScript = unlockScrip
-	return &SetGenesisTxUnlockScriptResponse{}, nil
+	return &SetGenesisTxUnlockScriptResponse{}
 }
 
 type PublishRequest struct {
@@ -428,21 +414,16 @@ type PulishResponse struct {
 	Txid string `json:"txid"`
 }
 
-func (gameServer *GameServer) PublishLock(request *PublishRequest) (*PulishResponse, error) {
+func (gameServer *GameServer) PublishLock(request *PublishRequest) *PulishResponse {
 	gameServer.L.Lock()
 	defer gameServer.L.Unlock()
-	msgTx, err := gameServer.GetGenesisMsgTx(true)
-	if err != nil {
-		return nil, err
-	}
+	msgTx := gameServer.GetGenesisMsgTx(true)
 	hash, err := gameServer.RpcClient.SendRawTransaction(msgTx, true)
-	if err != nil {
-		return nil, err
-	}
+	util.PanicIfErr(err, err)
 	gameServer.GenesisTxid = hash.String()
 	return &PulishResponse{
 		Txid: hash.String(),
-	}, nil
+	}
 }
 
 type SetPreimageRequest struct {
@@ -453,28 +434,20 @@ type SetPreimageRequest struct {
 type SetPreimageResponse struct {
 }
 
-func (gameServer *GameServer) SetPreimageLock(request *SetPreimageRequest) (*SetPreimageResponse, error) {
+func (gameServer *GameServer) SetPreimageLock(request *SetPreimageRequest) *SetPreimageResponse {
 	preimage, ok := big.NewInt(0).SetString(request.Preimage, 10)
-	if !ok {
-		return nil, errors.New("error preimage")
-	}
+	util.PanicIfTrue(!ok, errors.New("err preimage"))
 	hash := util.GetHash(preimage)
 	gameServer.L.Lock()
 	defer gameServer.L.Unlock()
-	participantContext, err := gameServer.GetParticipantContext(request.UserId)
-	if err != nil {
-		return nil, err
-	}
+	participantContext := gameServer.GetParticipantContext(request.UserId)
 
-	if participantContext.Preimage != nil {
-		return nil, errors.New("preimage already set")
-	}
+	util.PanicIfTrue(participantContext.Preimage != nil, errors.New("preimage already set"))
 
-	if participantContext.Hash.Cmp(hash) != 0 {
-		return nil, errors.New("cant be right preimage")
-	}
+	util.PanicIfTrue(participantContext.Hash.Cmp(hash) != 0, errors.New("cant be right preimage"))
+
 	participantContext.Preimage = preimage
-	return &SetPreimageResponse{}, nil
+	return &SetPreimageResponse{}
 }
 
 type GetRivalPreimagePubkeyRequest struct {
@@ -486,7 +459,7 @@ type GetRivalPreimagePubkeyResponse struct {
 	Pubkey   string `json:"pubkey"`
 }
 
-func (gameServer *GameServer) GetRivalPreimagePubkeyLock(request *GetRivalPreimagePubkeyRequest) (*GetRivalPreimagePubkeyResponse, error) {
+func (gameServer *GameServer) GetRivalPreimagePubkeyLock(request *GetRivalPreimagePubkeyRequest) *GetRivalPreimagePubkeyResponse {
 	gameServer.L.Lock()
 	defer gameServer.L.Unlock()
 	for _, participantContext := range gameServer.ParticipantContexts {
@@ -494,12 +467,12 @@ func (gameServer *GameServer) GetRivalPreimagePubkeyLock(request *GetRivalPreima
 			continue
 		}
 		if participantContext.Preimage == nil {
-			return nil, errors.New("rival preimage not set")
+			panic(errors.New("rival preimage not set"))
 		}
 		return &GetRivalPreimagePubkeyResponse{
 			Preimage: participantContext.Preimage.String(),
 			Pubkey:   hex.EncodeToString(participantContext.Pubkey.SerializeCompressed()),
-		}, nil
+		}
 	}
-	return nil, errors.New("preimage not found")
+	panic(errors.New("preimage not found"))
 }

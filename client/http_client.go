@@ -35,48 +35,48 @@ func NewHttpClient(host string) Client {
 	}
 }
 
-func (client *HttpClient) Join(id string) (*server.JoinResponse, error) {
+func (client *HttpClient) Join(id string) *server.JoinResponse {
 	request := &server.JoinRequest{
 		Id: id,
 	}
 	response := &server.JoinResponse{}
-	err := util.DoHttpParseHttpJsonResponse(HTTP_MEHTOD_POST, client.JoinUrl, nil, request, response)
-	return response, err
+	util.DoHttpParseHttpJsonResponse(HTTP_MEHTOD_POST, client.JoinUrl, nil, request, response)
+	return response
 }
 
-func (client *HttpClient) SetUtxoAndHash(request *server.SetUtxoAndHashRequest) error {
+func (client *HttpClient) SetUtxoAndHash(request *server.SetUtxoAndHashRequest) {
 	response := &server.SetUtxoAndHashResponse{}
-	err := util.DoHttpParseHttpJsonResponse(HTTP_MEHTOD_POST, client.SetUtxoAndHashUrl, nil, request, response)
-	return err
+	util.DoHttpParseHttpJsonResponse(HTTP_MEHTOD_POST, client.SetUtxoAndHashUrl, nil, request, response)
+	return
 }
 
-func (client *HttpClient) GetGenesisTx(request *server.GetGenesisTxRequest) (*server.GetGenesisTxResponse, error) {
+func (client *HttpClient) GetGenesisTx(request *server.GetGenesisTxRequest) *server.GetGenesisTxResponse {
 	response := &server.GetGenesisTxResponse{}
-	err := util.DoHttpParseHttpJsonResponse(HTTP_MEHTOD_POST, client.GetGenesisTxUrl, nil, request, response)
-	return response, err
+	util.DoHttpParseHttpJsonResponse(HTTP_MEHTOD_POST, client.GetGenesisTxUrl, nil, request, response)
+	return response
 }
 
-func (client *HttpClient) SetGenesisTxUnlockScript(request *server.SetGenesisTxUnlockScriptRequest) error {
+func (client *HttpClient) SetGenesisTxUnlockScript(request *server.SetGenesisTxUnlockScriptRequest) {
 	response := &server.SetGenesisTxUnlockScriptResponse{}
-	err := util.DoHttpParseHttpJsonResponse(HTTP_MEHTOD_POST, client.SetGenesisTxUnlockScriptUrl, nil, request, response)
-	return err
+	util.DoHttpParseHttpJsonResponse(HTTP_MEHTOD_POST, client.SetGenesisTxUnlockScriptUrl, nil, request, response)
+	return
 }
 
-func (client *HttpClient) Publish() (string, error) {
+func (client *HttpClient) Publish() string {
 	request := &server.PublishRequest{}
 	response := &server.PulishResponse{}
-	err := util.DoHttpParseHttpJsonResponse(HTTP_MEHTOD_POST, client.PublishUrl, nil, request, response)
-	return response.Txid, err
+	util.DoHttpParseHttpJsonResponse(HTTP_MEHTOD_POST, client.PublishUrl, nil, request, response)
+	return response.Txid
 }
 
-func (client *HttpClient) SetPreimage(request *server.SetPreimageRequest) error {
+func (client *HttpClient) SetPreimage(request *server.SetPreimageRequest) {
 	response := &server.SetPreimageResponse{}
-	err := util.DoHttpParseHttpJsonResponse(HTTP_MEHTOD_POST, client.SetPreimageUrl, nil, request, response)
-	return err
+	util.DoHttpParseHttpJsonResponse(HTTP_MEHTOD_POST, client.SetPreimageUrl, nil, request, response)
+	return
 }
 
-func (client *HttpClient) GetRivalPreimage(request *server.GetRivalPreimagePubkeyRequest) (*server.GetRivalPreimagePubkeyResponse, error) {
+func (client *HttpClient) GetRivalPreimage(request *server.GetRivalPreimagePubkeyRequest) *server.GetRivalPreimagePubkeyResponse {
 	response := &server.GetRivalPreimagePubkeyResponse{}
-	err := util.DoHttpParseHttpJsonResponse(HTTP_MEHTOD_POST, client.GetRivalPreimageUrl, nil, request, response)
-	return response, err
+	util.DoHttpParseHttpJsonResponse(HTTP_MEHTOD_POST, client.GetRivalPreimageUrl, nil, request, response)
+	return response
 }

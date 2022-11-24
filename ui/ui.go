@@ -182,52 +182,46 @@ func (uictx *UIContext) ReadLoop() {
 	}
 }
 
-func (uictx *UIContext) DoEventHost(*UIEvent) error {
+func (uictx *UIContext) DoEventHost(*UIEvent) {
 	if !uictx.CheckStateIn(UI_STATE_WAIT_DECIDE_MODE) {
-		return errors.New("command not for now")
+		panic(errors.New("command not for now"))
 	}
 	uictx.GameServer.Open()
 	internalClient := client.NewInternalClient(uictx.GameServer)
-	joinResponse, err := internalClient.Join(uictx.Id)
-	if err != nil {
-		return err
-	}
+	joinResponse := internalClient.Join(uictx.Id)
 	uictx.GameContext.PlayerIndex = joinResponse.Index
 	uictx.GameClient = internalClient
 	uictx.SetState(UI_STATE_WAIT_PLAYER, nil)
-	return nil
+	return
 }
 
-func (uictx *UIContext) DoEventJoin(event *UIEvent) error {
+func (uictx *UIContext) DoEventJoin(event *UIEvent) {
 	if !uictx.CheckStateIn(UI_STATE_WAIT_DECIDE_MODE) {
-		return errors.New("command not for now")
+		panic(errors.New("command not for now"))
 	}
 	client := client.NewHttpClient(event.Params)
-	response, err := client.Join(uictx.Id)
-	if err != nil {
-		return err
-	}
+	response := client.Join(uictx.Id)
 	uictx.GameClient = client
 	uictx.GameContext.PlayerIndex = response.Index
 	uictx.SetState(UI_STATE_WAIT_PREIMAGE_UTXO, []string{response.Rival})
-	return nil
+	return
 }
 
-func (uictx *UIContext) DoEventJoined(event *UIEvent) error {
+func (uictx *UIContext) DoEventJoined(event *UIEvent) {
 	if !uictx.CheckStateIn(UI_STATE_WAIT_PLAYER) {
-		return errors.New("command not for now")
+		panic(errors.New("command not for now"))
 	}
 	uictx.SetState(UI_STATE_WAIT_PREIMAGE_UTXO, []string{event.Params})
-	return nil
+	return
 }
 
-func (uictx *UIContext) DoEventPreimage(event *UIEvent) error {
+func (uictx *UIContext) DoEventPreimage(event *UIEvent) {
 	if !uictx.CheckStateIn(UI_STATE_WAIT_PREIMAGE_UTXO) {
-		return errors.New("command not for now")
+		panic(errors.New("command not for now"))
 	}
 	preimage, ok := big.NewInt(0).SetString(event.Params, 10)
 	if !ok {
-		return errors.New("wrong number")
+		panic(errors.New("wrong number"))
 	}
 
 	hash := util.GetHash(preimage)
@@ -238,12 +232,12 @@ func (uictx *UIContext) DoEventPreimage(event *UIEvent) error {
 
 	txid, err := uictx.RpcClient.SendToAddress(addr, server.GENESIS_FAUCET_AMOUNT)
 	if err != nil {
-		return err
+		panic(err)
 	}
 
 	tx, err := uictx.RpcClient.GetRawTransaction(txid)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	for _, vout := range tx.MsgTx().TxOut {
 		script, err := txscript.ParsePkScript(vout.PkScript)
@@ -275,29 +269,20 @@ func (uictx *UIContext) DoEventPreimage(event *UIEvent) error {
 		Preindex: 0,
 	}
 
-	err = uictx.GameClient.SetUtxoAndHash(setUtxoAndHashRequest)
-	if err != nil {
-		return err
-	}
+	uictx.GameClient.SetUtxoAndHash(setUtxoAndHashRequest)
 	uictx.SetState(UI_STATE_WAIT_SIGN, nil)
-	return nil
+	return
 }
 
-func (uictx *UIContext) DoEventSign(event *UIEvent) error {
+func (uictx *UIContext) DoEventSign(event *UIEvent) {
 	if !uictx.CheckStateIn(UI_STATE_WAIT_SIGN) {
-		return errors.New("command not for now")
+		panic(errors.New("command not for now"))
 	}
 	getGenesisTxRequest := &server.GetGenesisTxRequest{
 		Sign: false,
 	}
-	getGenesisTxResponse, err := uictx.GameClient.GetGenesisTx(getGenesisTxRequest)
-	if err != nil {
-		return err
-	}
+	getGenesisTxResponse := uictx.GameClient.GetGenesisTx(getGenesisTxRequest)
 	msgtx := util.DeserializeRawTx(getGenesisTxResponse.Rawtx)
-	if err != nil {
-		return err
-	}
 
 	var unlockScript []byte = nil
 	for index, vin := range msgtx.TxIn {
@@ -315,7 +300,7 @@ func (uictx *UIContext) DoEventSign(event *UIEvent) error {
 	}
 
 	if unlockScript == nil {
-		return errors.New("utxo not found")
+		panic(errors.New("utxo not found"))
 	}
 
 	setGenesisTxUnlockScriptRequest := &server.SetGenesisTxUnlockScriptRequest{
@@ -323,39 +308,30 @@ func (uictx *UIContext) DoEventSign(event *UIEvent) error {
 		UnlockScriptHex: hex.EncodeToString(unlockScript),
 	}
 
-	err = uictx.GameClient.SetGenesisTxUnlockScript(setGenesisTxUnlockScriptRequest)
-	if err != nil {
-		return err
-	}
+	uictx.GameClient.SetGenesisTxUnlockScript(setGenesisTxUnlockScriptRequest)
 	uictx.SetState(UI_STATE_WAIT_PUBLISH_OR_OPEN, nil)
-	return nil
+	return
 }
 
-func (uictx *UIContext) DoEventPublish(event *UIEvent) error {
+func (uictx *UIContext) DoEventPublish(event *UIEvent) {
 	if !uictx.CheckStateIn(UI_STATE_WAIT_PUBLISH_OR_OPEN) {
-		return errors.New("command not for now")
+		panic(errors.New("command not for now"))
 	}
 
-	txid, err := uictx.GameClient.Publish()
-	if err != nil {
-		return err
-	}
+	txid := uictx.GameClient.Publish()
 	uictx.SetState(UI_STATE_WAIT_OPEN, []string{txid})
-	return nil
+	return
 }
 
-func (uictx *UIContext) DoEventOpen(event *UIEvent) error {
+func (uictx *UIContext) DoEventOpen(event *UIEvent) {
 	if !uictx.CheckStateIn(UI_STATE_WAIT_PUBLISH_OR_OPEN, UI_STATE_WAIT_OPEN) {
-		return errors.New("command not for now")
+		panic(errors.New("command not for now"))
 	}
 
 	getGenesisTxRequest := &server.GetGenesisTxRequest{
 		Sign: true,
 	}
-	getGenesisTxResponse, err := uictx.GameClient.GetGenesisTx(getGenesisTxRequest)
-	if err != nil {
-		panic(err)
-	}
+	getGenesisTxResponse := uictx.GameClient.GetGenesisTx(getGenesisTxRequest)
 
 	genesisMsgTx := util.DeserializeRawTx(getGenesisTxResponse.Rawtx)
 	uictx.GenesisMsgTxCache = genesisMsgTx
@@ -401,17 +377,14 @@ func (uictx *UIContext) DoEventOpen(event *UIEvent) error {
 		UserId:   uictx.Id,
 		Preimage: uictx.GameContext.Preimage.String(),
 	}
-	err = uictx.GameClient.SetPreimage(setPreimageRequest)
-	if err != nil {
-		return err
-	}
+	uictx.GameClient.SetPreimage(setPreimageRequest)
 	uictx.SetState(UI_STATE_WAIT_CHECK_OR_TAKE_DEPOSIT, []string{openMsgTxid.String()})
-	return nil
+	return
 }
 
-func (uictx *UIContext) DoEventTakeDeposit(event *UIEvent) error {
+func (uictx *UIContext) DoEventTakeDeposit(event *UIEvent) {
 	if !uictx.CheckStateIn(UI_STATE_WAIT_CHECK_OR_TAKE_DEPOSIT) {
-		return errors.New("command not for now")
+		panic(errors.New("command not for now"))
 	}
 	genesisMsgTx := uictx.GenesisMsgTxCache
 
@@ -452,35 +425,32 @@ func (uictx *UIContext) DoEventTakeDeposit(event *UIEvent) error {
 		panic(err)
 	}
 	uictx.SetState(UI_STATE_WAIT_CLOSE_WIN2, []string{openMsgTxid.String()})
-	return nil
+	return
 }
 
-func (uictx *UIContext) DoEventCheck(event *UIEvent) error {
+func (uictx *UIContext) DoEventCheck(event *UIEvent) {
 	if !uictx.CheckStateIn(UI_STATE_WAIT_CHECK_OR_TAKE_DEPOSIT) {
-		return errors.New("command not for now")
+		panic(errors.New("command not for now"))
 	}
 
 	request := &server.GetRivalPreimagePubkeyRequest{
 		UserId: uictx.Id,
 	}
-	getRivalPreimageResponse, err := uictx.GameClient.GetRivalPreimage(request)
-	if err != nil {
-		return err
-	}
+	getRivalPreimageResponse := uictx.GameClient.GetRivalPreimage(request)
 
 	pubkeyByte, err := hex.DecodeString(getRivalPreimageResponse.Pubkey)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	rivalPubkey, err := btcec.ParsePubKey(pubkeyByte, btcec.S256())
 	if err != nil {
-		return err
+		panic(err)
 	}
 
 	selfPreimage := uictx.GameContext.Preimage
 	rivalPreimage, ok := big.NewInt(0).SetString(getRivalPreimageResponse.Preimage, 10)
 	if !ok {
-		return errors.New("error rival preimage")
+		panic(errors.New("err rival preimage"))
 	}
 
 	var number1 *big.Int = nil
@@ -515,28 +485,19 @@ func (uictx *UIContext) DoEventCheck(event *UIEvent) error {
 		rivalPreimage.String(),
 		rivalCards,
 	})
-	return nil
+	return
 }
 
-func (uictx *UIContext) DoEventWin(event *UIEvent) error {
+func (uictx *UIContext) DoEventWin(event *UIEvent) {
 	if !uictx.CheckStateIn(UI_STATE_WAIT_WIN_OR_LOSE) {
-		return errors.New("command not for now")
+		panic(errors.New("command not for now"))
 	}
 
-	// request := &server.GetGenesisTxRequest{
-	// 	Sign: true,
-	// }
-
 	genesisMsgTx := uictx.GenesisMsgTxCache
-	// getGenesisTxResponse, err := uictx.GameClient.GetGenesisTx(request)
-	// if err != nil {
-	// 	return err
-	// }
-	// genesisMsgTx := util.DeserializeRawTx(getGenesisTxResponse.Rawtx)
 
 	factor, err := strconv.ParseInt(event.Params, 10, 64)
 	if err != nil {
-		return err
+		panic(err)
 	}
 
 	txCtx := &util.TxContext{
@@ -550,7 +511,7 @@ func (uictx *UIContext) DoEventWin(event *UIEvent) error {
 	selfAddress := util.PrivateKey2Address(uictx.PrivateKey)
 	selfScript, err := txscript.PayToAddrScript(selfAddress)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	seflAmount := server.GAMBLING_CAPITAL * (server.MAX_FACTOR + factor)
 	txCtx.AddVout(seflAmount, selfScript)
@@ -558,7 +519,7 @@ func (uictx *UIContext) DoEventWin(event *UIEvent) error {
 	rivalAddress := util.Pubkey2Address(uictx.RivalPubkey)
 	rivalScript, err := txscript.PayToAddrScript(rivalAddress)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	rivalAmount := server.GAMBLING_CAPITAL * (server.MAX_FACTOR - factor)
 	txCtx.AddVout(rivalAmount, rivalScript)
@@ -581,43 +542,43 @@ func (uictx *UIContext) DoEventWin(event *UIEvent) error {
 		panic(err)
 	}
 	uictx.SetState(UI_STATE_WAIT_CLOSE_WIN, []string{hash.String()})
-	return nil
+	return
 }
 
-func (uictx *UIContext) DoEventLose(event *UIEvent) error {
+func (uictx *UIContext) DoEventLose(event *UIEvent) {
 	if !uictx.CheckStateIn(UI_STATE_WAIT_WIN_OR_LOSE) {
-		return errors.New("command not for now")
+		panic(errors.New("command not for now"))
 	}
 	uictx.SetState(UI_STATE_WAIT_CLOSE_LOSE, nil)
-	return nil
+	return
 }
 
-func (uictx *UIContext) DoEvent(event *UIEvent) error {
+func (uictx *UIContext) DoEvent(event *UIEvent) {
 	switch event.Event {
 	case EVENT_HOST:
-		return uictx.DoEventHost(event)
+		uictx.DoEventHost(event)
 	case EVENT_JOIN:
-		return uictx.DoEventJoin(event)
+		uictx.DoEventJoin(event)
 	case EVENT_JOINED:
-		return uictx.DoEventJoined(event)
+		uictx.DoEventJoined(event)
 	case EVENT_PREIMAGE:
-		return uictx.DoEventPreimage(event)
+		uictx.DoEventPreimage(event)
 	case EVENT_SIGN:
-		return uictx.DoEventSign(event)
+		uictx.DoEventSign(event)
 	case EVENT_PUBLISH:
-		return uictx.DoEventPublish(event)
+		uictx.DoEventPublish(event)
 	case EVENT_OPEN:
-		return uictx.DoEventOpen(event)
+		uictx.DoEventOpen(event)
 	case EVENT_TAKEDEPOSIT:
-		return uictx.DoEventTakeDeposit(event)
+		uictx.DoEventTakeDeposit(event)
 	case EVENT_CHEKC:
-		return uictx.DoEventCheck(event)
+		uictx.DoEventCheck(event)
 	case EVENT_WIN:
-		return uictx.DoEventWin(event)
+		uictx.DoEventWin(event)
 	case EVENT_LOSE:
-		return uictx.DoEventLose(event)
+		uictx.DoEventLose(event)
 	default:
-		return errors.New("unknown event")
+		panic(errors.New("unknown event"))
 	}
 }
 
@@ -665,12 +626,16 @@ func (uictx *UIContext) HandleState() {
 
 func (uictx *UIContext) ProcessEvent() {
 	event := <-uictx.EventChannel
-	err := uictx.DoEvent(event)
-	if err != nil {
-		fmt.Printf("> ProcessEvent DoEvent %s %s\n", event.Event, err)
-		return
-	}
-	uictx.HandleState()
+	util.Try(
+		func() {
+			uictx.DoEvent(event)
+			uictx.HandleState()
+		},
+		func(i interface{}) {
+			errMsg := util.GetErrInterfaceMsg(i)
+			fmt.Printf("> ProcessEvent DoEvent %s %s\n", event.Event, errMsg)
+		},
+	)
 }
 
 func (uictx *UIContext) ProcessEventLoop() {

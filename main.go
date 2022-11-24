@@ -1,31 +1,19 @@
 package main
 
 import (
-	"encoding/hex"
 	"flag"
 	"fmt"
-	"math/big"
 	"satoshicard/conf"
-	"satoshicard/server"
 	"satoshicard/ui"
-	"satoshicard/util"
 	"time"
-
-	"github.com/btcsuite/btcd/btcec"
-	"github.com/sCrypt-Inc/go-scryptlib"
 )
-
-type Flags struct {
-	Env  string
-	Mode int64
-}
 
 func WaitInput() {
 	waitinput := ""
 	fmt.Scanf("%s", &waitinput)
 }
 
-func Test1() {
+func DoMode1() {
 	config := conf.GetConfig()
 	uictx := ui.NewUIContext(config, 1)
 	hostEvent := &ui.UIEvent{
@@ -79,7 +67,7 @@ func Test1() {
 	uictx.EventChannel <- loseEvent
 }
 
-func Test2() {
+func DoMode2() {
 	config := conf.GetConfig()
 	uictx := ui.NewUIContext(config, 2)
 	joinEvent := &ui.UIEvent{
@@ -132,101 +120,27 @@ func Test2() {
 	uictx.EventChannel <- winEvent
 }
 
-func Test3() {
-	number1 := big.NewInt(22)
-	number2 := big.NewInt(27)
-	winhash := util.GetHash(number2)
-	factor := big.NewInt(2)
-
-	cards := util.GetCardStrs(number1, number2)
-	fmt.Println(cards)
-
-	proof, err := util.GetProof(number1, number2, winhash, factor)
-	if err != nil {
-		panic(err)
-	}
-	util.PrintJson(proof)
-
-	proof2, err := util.GetProof(number1, number2, winhash, factor)
-	if err != nil {
-		panic(err)
-	}
-	util.PrintJson(proof2)
-}
-
-func Test4() {
-	config := conf.GetConfig()
-	contract := util.LoadDesc(config.LockContractPath)
-	number := big.NewInt(27)
-	numberHash := util.GetHash(number)
-
-	matureTime := time.Now().Unix() + 60*60
-	privateKeyByte, err := hex.DecodeString(config.Key)
-	if err != nil {
-		panic(err)
-	}
-	privateKey, pubkey := btcec.PrivKeyFromBytes(btcec.S256(), privateKeyByte)
-	lockConstructorParams1 := map[string]scryptlib.ScryptType{
-		"matureTime":   scryptlib.NewInt(matureTime),
-		"preimageHash": scryptlib.NewIntFromBigInt(numberHash),
-		"pubkey":       scryptlib.NewPubKey(util.ToBecPubkey(pubkey)),
-	}
-	genesisLockScript := server.GetConstructorLockScript(lockConstructorParams1, contract)
-	genesisTxCtx := util.NewTxContext()
-	genesisTxCtx.SupplementFeePrivateKey = privateKey
-	rpcClient := ui.NewRpcClient(config.RpcClientConfig)
-	genesisTxCtx.RpcClient = rpcClient
-	genesisAmount := int64(10000)
-	genesisTxCtx.AddVout(genesisAmount, genesisLockScript)
-	genesisTx := genesisTxCtx.SupplementFeeAndBuildByFaucet()
-	txid, err := genesisTxCtx.RpcClient.SendRawTransaction(genesisTx, true)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("Test4 7:", txid.String())
-
-}
-
-func Test5() {
-	// pri1, err := ecdsa.GenerateKey(btcec.S256(), rand.Reader)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// pub1 := pri1.PublicKey
-	// pri2, err := ecdsa.GenerateKey(btcec.S256(), rand.Reader)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// pub2 := pri2.PublicKey
-
-}
-
-func DoMain() {
+func DoMode0() {
 	config := conf.GetConfig()
 	ui.NewUIContext(config, 0)
 }
 
 func main() {
-	// uictx := &ui.UIContext{}
-	flags := &Flags{}
-	flag.StringVar(&flags.Env, "env", "", "")
-	flag.Int64Var(&flags.Mode, "mode", 0, "")
-	flag.Parse()
-	conf.Init(flags.Env)
-
-	switch flags.Mode {
+	conf.Init()
+	config := conf.GetConfig()
+	if config.Help {
+		flag.Usage()
+		return
+	}
+	switch config.Mode {
 	case 0:
-		DoMain()
+		DoMode0()
 	case 1:
-		Test1()
+		DoMode1()
 	case 2:
-		Test2()
-	case 3:
-		Test3()
-	case 4:
-		Test4()
+		DoMode2()
 	default:
-		panic("not support mode")
+		panic("unknown mode")
 	}
 	for {
 		time.Sleep(time.Minute)

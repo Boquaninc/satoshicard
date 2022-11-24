@@ -3,11 +3,11 @@ package client
 import "satoshicard/server"
 
 type Client interface {
-	Join(id string) (*server.JoinResponse, error)
-	SetUtxoAndHash(request *server.SetUtxoAndHashRequest) error
-	GetGenesisTx(*server.GetGenesisTxRequest) (*server.GetGenesisTxResponse, error)
-	SetGenesisTxUnlockScript(request *server.SetGenesisTxUnlockScriptRequest) error
-	Publish() (string, error)
-	SetPreimage(request *server.SetPreimageRequest) error
-	GetRivalPreimage(*server.GetRivalPreimagePubkeyRequest) (*server.GetRivalPreimagePubkeyResponse, error)
+	Join(id string) *server.JoinResponse
+	SetUtxoAndHash(request *server.SetUtxoAndHashRequest)
+	GetGenesisTx(*server.GetGenesisTxRequest) *server.GetGenesisTxResponse
+	SetGenesisTxUnlockScript(request *server.SetGenesisTxUnlockScriptRequest)
+	Publish() string
+	SetPreimage(request *server.SetPreimageRequest)
+	GetRivalPreimage(*server.GetRivalPreimagePubkeyRequest) *server.GetRivalPreimagePubkeyResponse
 }

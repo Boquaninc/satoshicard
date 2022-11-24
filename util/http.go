@@ -3,7 +3,6 @@ package util
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -102,16 +101,14 @@ func PrintJson(i interface{}) {
 	fmt.Println(string(b))
 }
 
-func DoHttp(method string, url string, header map[string]string, data interface{}) ([]byte, error) {
+func DoHttp(method string, url string, header map[string]string, data interface{}) []byte {
 	var content []byte = nil
 	if data != nil {
 		contentTmp, err := json.Marshal(data)
-		if err != nil {
-			return nil, err
-		}
+		PanicIfErr(err, err)
 		content = contentTmp
 	}
-	ToCurlStr(method, header, content, url)
+	// ToCurlStr(method, header, content, url)
 
 	req, err := http.NewRequest(method, url, bytes.NewReader(content))
 	for key, value := range header {
@@ -119,30 +116,21 @@ func DoHttp(method string, url string, header map[string]string, data interface{
 	}
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
+	PanicIfErr(err, err)
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
+	PanicIfErr(err, err)
 	// PrintJson(body)
-	return body, nil
+	return body
 }
 
-func DoHttpParseHttpJsonResponse(method string, url string, header map[string]string, data interface{}, result interface{}) error {
-	resultByte, err := DoHttp(method, url, header, data)
-	if err != nil {
-		return err
-	}
+func DoHttpParseHttpJsonResponse(method string, url string, header map[string]string, data interface{}, result interface{}) {
+	resultByte := DoHttp(method, url, header, data)
+
 	httpJsonResponse := &HttpJsonResponse{}
-	err = json.Unmarshal(resultByte, httpJsonResponse)
-	if err != nil {
-		return err
-	}
-	if httpJsonResponse.Code != 0 {
-		return errors.New(httpJsonResponse.Msg)
-	}
-	return json.Unmarshal(httpJsonResponse.Data, result)
+	err := json.Unmarshal(resultByte, httpJsonResponse)
+	PanicIfErr(err, err)
+	PanicIfTrue(httpJsonResponse.Code != 0, httpJsonResponse.Msg)
+	err = json.Unmarshal(httpJsonResponse.Data, result)
+	PanicIfErr(err, err)
 }
