@@ -1,0 +1,1 @@
+/data/bsv/bin/bitcoind -datadir=/data/bsv
