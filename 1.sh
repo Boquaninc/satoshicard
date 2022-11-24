@@ -12,8 +12,6 @@
 # -mode=1
 
 
-rm -rf satoshicard
-go build
 ./satoshicard \
 -help=false \
 -listen=0.0.0.0:10001 \

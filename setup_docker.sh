@@ -1,5 +1,3 @@
-rm -rf satoshicard
-go build
 rm -rf /work/bin-satoshicard/satoshicard/circuits
 rm -rf /work/bin-satoshicard/satoshicard/contract
 rm -rf /work/bin-satoshicard/satoshicard/desc

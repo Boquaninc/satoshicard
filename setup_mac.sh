@@ -1,3 +1,6 @@
+rm -rf satoshicard
+go build
+
 rm -rf circuits
 rm -rf contract
 rm -rf desc
