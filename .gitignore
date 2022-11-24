@@ -4,3 +4,6 @@ satoshicard
 .DS_Store
 out
 proof.json
+desc
+contract
+circuits
