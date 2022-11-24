@@ -1,0 +1,107 @@
+// import "verifier.scrypt";
+
+type FQ = int;
+
+struct G1Point {
+    FQ x;
+    FQ y;
+}
+
+struct FQ2 {
+    FQ x;
+    FQ y;
+}
+
+struct G2Point {
+    FQ2 x;
+    FQ2 y;
+}
+
+struct Proof {
+    G1Point a;
+    G2Point b;
+    G1Point c;
+}
+
+
+contract Satoshicard {
+
+    int hash1;
+    int hash2;
+    PubKey user1;
+    PubKey user2;
+    int maxfactor;
+
+
+
+//     {
+//   "scheme": "g16",
+//   "curve": "bn128",
+//   "proof": {
+//     "a": [
+//       "0x0e8784f99d5b6e507033053f19a123ca9d64813fc75e5bbd8b2af8f935ffa519",
+//       "0x127855b55ac5c07308e34ba89edfb0b165153104faaeff6ec2322e100dc5a9be"
+//     ],
+//     "b": [
+//       [
+//         "0x012e6a9500965a6978bf40118bed2070d3f5c0e3137558bad2aee39d26f3caeb",
+//         "0x04d89437deffaca6afa1c93fc85f28882116f6f393650244a610c0277929d1fa"
+//       ],
+//       [
+//         "0x199daacf33cd725852db62534ad9bca8c7e9c46e9daa7b7845c68a6630f40102",
+//         "0x2afe1ae6f1d9b38fdcee4a3b35432fc6bda637c4616d82d1f7cbad29f9910b34"
+//       ]
+//     ],
+//     "c": [
+//       "0x0fbed969c53a96819d2d2435676187a0a44a3e8d1ec8aab8a0a52982715b2c87",
+//       "0x2c0525f000183cccfe74e1348cb997a49301229726a836bc5fbd6cb286b9ccf5"
+//     ]
+//   },
+//   "inputs": [
+//     "0x226b4640946fa9a4c6fb44e78f3f7c3fb42f5d336f28e31d129994114bae2623",
+//     "0x0000000000000000000000000000000000000000000000000000000000000002"
+//   ]
+// }
+
+    function verify(int[4] inputs, Proof proof) : bool{
+        require(inputs[0]==22);
+        require(inputs[1]==27);
+        require(inputs[2]==this.hash2);
+        require(inputs[3]==2);
+
+        require(proof.a.x==0x0e8784f99d5b6e507033053f19a123ca9d64813fc75e5bbd8b2af8f935ffa519);
+        require(proof.a.y==0x127855b55ac5c07308e34ba89edfb0b165153104faaeff6ec2322e100dc5a9be);
+        require(proof.b.x.x==0x012e6a9500965a6978bf40118bed2070d3f5c0e3137558bad2aee39d26f3caeb);
+        require(proof.b.x.y==0x04d89437deffaca6afa1c93fc85f28882116f6f393650244a610c0277929d1fa);
+        require(proof.b.y.x==0x199daacf33cd725852db62534ad9bca8c7e9c46e9daa7b7845c68a6630f40102);
+        require(proof.b.y.y==0x2afe1ae6f1d9b38fdcee4a3b35432fc6bda637c4616d82d1f7cbad29f9910b34);
+        require(proof.c.x==0x0fbed969c53a96819d2d2435676187a0a44a3e8d1ec8aab8a0a52982715b2c87);
+        require(proof.c.y==0x2c0525f000183cccfe74e1348cb997a49301229726a836bc5fbd6cb286b9ccf5);
+        return true;
+    }   
+    public function run(SigHashPreimage txPreimage,Proof proof,int number1,int number2,int winHash,int factor)
+    {
+        require(Tx.checkPreimage(txPreimage));
+        require(this.verify([number1,number2,winHash,factor],proof));
+        PubKey winner=PubKey(b'00');
+        PubKey loser=PubKey(b'00');
+        if(winHash==this.hash1){
+            winner=this.user1;
+            loser=this.user2;
+        }else if (winHash==this.hash2){
+            winner=this.user2;
+            loser=this.user1;
+        }else {
+            require(false);
+        }
+        int baseAmount=SigHash.value(txPreimage)/(2*this.maxfactor);
+        int winnerAmount=baseAmount*(this.maxfactor+factor);
+        int loserAmount=baseAmount*(this.maxfactor-factor);
+        bytes script1 = Utils.buildPublicKeyHashScript(hash160(winner));
+        bytes output1 = Utils.buildOutput(script1,winnerAmount);
+
+        bytes script2 = Utils.buildPublicKeyHashScript(hash160(loser));
+        bytes output2 = Utils.buildOutput(script2, loserAmount);
+        require(hash256(output1+output2) == SigHash.hashOutputs(txPreimage));
+    }
+}
