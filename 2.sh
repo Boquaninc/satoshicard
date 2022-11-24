@@ -1,3 +1,3 @@
 # rm satoshicard
 # go build
-./satoshicard -env=dev2 -mode=2
+./satoshicard -env=dev2 -mode=0
