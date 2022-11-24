@@ -21,4 +21,4 @@
 -gamecontractpath=./desc/satoshicard_release_desc.json \
 -lockcontractpath=./desc/satoshicard_timelock_release_desc.json \
 -key=ed909bc8d0b35d622a4c3b0c700fce4f1472c533289d5127a782c09c669fb1d7 \
--mode=1
+-mode=0
