@@ -1,7 +1,7 @@
 ./satoshicard \
 -help=false \
 -listen=0.0.0.0:10002 \
--rpchost=127.0.0.1:19002 \
+-rpchost=192.168.10.165:19002 \
 -rpcusername=regtest \
 -rpcpassword=123 \
 -gamecontractpath=./desc/satoshicard_release_desc.json \
