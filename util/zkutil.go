@@ -2,6 +2,7 @@ package util
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -131,18 +132,18 @@ func GetProof(number1 *big.Int, number2 *big.Int, winHash *big.Int, factor *big.
 	cmd := exec.Command("sh", "scripts/gen_proof.sh", number1.String(), number2.String(), winHash.String(), factor.String())
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, err
+		return nil, errors.New("Wrong input multiple, proof generation failed. Please enter the correct multiple")
 	}
 	log.Println("Computing witness :", string(output))
 	content, err := ioutil.ReadFile("./circuits/proof.json")
 	if err != nil {
-		return nil, err
+		return nil, errors.New("Wrong input multiple, proof generation failed. Please enter the correct multiple")
 	}
 
 	pj := &ProofJson{}
 
 	if err := json.Unmarshal(content, &pj); err != nil {
-		return nil, err
+		return nil, errors.New("Wrong input multiple, proof generation failed. Please enter the correct multiple")
 	}
 	return &pj.P, nil
 }
