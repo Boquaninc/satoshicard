@@ -612,7 +612,7 @@ func (uictx *UIContext) HandleState() {
 		An error will be reported if the value entered is incorrect
 	lose
 		Command Description: There's no need for the losing player to operate anything to end the game, 
-		or he or she can also enter "lose:" command to end the game.`)
+		or he or she can also enter "lose:" command to end the game.\n`)
 	case UI_STATE_WAIT_PLAYER:
 		fmt.Printf("> host a game successful,now please wait for another player\n")
 	case UI_STATE_WAIT_PREIMAGE_UTXO:
