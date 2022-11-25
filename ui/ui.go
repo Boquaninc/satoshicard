@@ -586,19 +586,33 @@ func (uictx *UIContext) HandleState() {
 	state := uictx.State
 	switch state.Code {
 	case UI_STATE_WAIT_DECIDE_MODE:
-		fmt.Printf("> command list:\n")
-		fmt.Printf("	host\n")
-		fmt.Printf("	join\n")
-		fmt.Printf("	joined\n")
-		fmt.Printf("	preimage\n")
-		fmt.Printf("	sign\n")
-		fmt.Printf("	publish\n")
-		fmt.Printf("	open\n")
-		fmt.Printf("	takedeposit\n")
-		fmt.Printf("	check\n")
-		fmt.Printf("	win\n")
-		fmt.Printf("	lose\n")
-		fmt.Printf("> join a game or host a game\n")
+		fmt.Println(`> command list:
+	host 
+		Command Description: Only two players are allowed to participate. Take player 1 creating a room as an example. 
+		Player 1 enters "host:" and the default room number is "127.0.0.1:10001". At this point, let’s wait for player 2 to enter the room
+	join
+		Command Description: Player 2 enters "join:127.0.0.1:10001" to join the room
+	preimage
+		Command Description: Player 1 and Player 2 each enter a large value. For example: "preimage:14058023580860238450283". 
+		Only numbers can be entered, entering other characters will result in an error
+	sign
+		Command Description: If the players have finished executing preimage, type "sign:" to sign
+	publish
+		Command Description: Only one player is required to enter "publish:" to publish
+	open
+		Command Description: Each player enters "open:" to show the card
+	takedeposit
+		Command Description: If one of the players does not open, 
+		the other player can enter "takedeposit:" to take the bets of both players
+	check
+		Command Description: Each player enters "check:" to see the hand of the others. In this way, 
+		they can know how much they won or lost and the corresponding multiple
+	win
+		Command Description: The winning player enters "win: multiple" (e.g. win: 3) to generate a proof and then gets the prize to end the game. 
+		An error will be reported if the value entered is incorrect
+	lose
+		Command Description: There's no need for the losing player to operate anything to end the game, 
+		or he or she can also enter "lose:" command to end the game.`)
 	case UI_STATE_WAIT_PLAYER:
 		fmt.Printf("> host a game successful,now please wait for another player\n")
 	case UI_STATE_WAIT_PREIMAGE_UTXO:
