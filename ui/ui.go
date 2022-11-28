@@ -203,7 +203,11 @@ func (uictx *UIContext) DoEventJoin(event *UIEvent) {
 	response := client.Join(uictx.Id)
 	uictx.GameClient = client
 	uictx.GameContext.PlayerIndex = response.Index
-	uictx.SetState(UI_STATE_WAIT_PREIMAGE_UTXO, []string{response.Rival})
+	rival := "Bob"
+	if response.Index == 1 {
+		rival = "Alice"
+	}
+	uictx.SetState(UI_STATE_WAIT_PREIMAGE_UTXO, []string{rival})
 	return
 }
 
