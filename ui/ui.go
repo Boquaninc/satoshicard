@@ -588,12 +588,12 @@ func (uictx *UIContext) HandleState() {
 	case UI_STATE_WAIT_DECIDE_MODE:
 		fmt.Println(`> command list:
 	host 
-		Command Description: Only two players are allowed to participate. Take player 1 creating a room as an example. 
-		Player 1 enters "host:" and the default room number is "127.0.0.1:10001". At this point, let’s wait for player 2 to enter the room
+		Command Description: Only two players are allowed to participate. Take Player Alice creating a room as an example. 
+		Player Alice enters "host:" and the default room number is "127.0.0.1:10001". At this point, let’s wait for Player Bob to enter the room
 	join
-		Command Description: Player 2 enters "join:127.0.0.1:10001" to join the room
+		Command Description: Player Bob enters "join:127.0.0.1:10001" to join the room
 	preimage
-		Command Description: Player 1 and Player 2 each enter a large value. For example: "preimage:14058023580860238450283". 
+		Command Description: Player Alice and Player Bob each enter a large value. For example: "preimage:14058023580860238450283". 
 		Only numbers can be entered, entering other characters will result in an error
 	sign
 		Command Description: If the players have finished executing preimage, type "sign:" to sign
