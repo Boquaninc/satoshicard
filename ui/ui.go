@@ -203,11 +203,7 @@ func (uictx *UIContext) DoEventJoin(event *UIEvent) {
 	response := client.Join(uictx.Id)
 	uictx.GameClient = client
 	uictx.GameContext.PlayerIndex = response.Index
-	rival := "Bob"
-	if response.Index == 1 {
-		rival = "Alice"
-	}
-	uictx.SetState(UI_STATE_WAIT_PREIMAGE_UTXO, []string{rival})
+	uictx.SetState(UI_STATE_WAIT_PREIMAGE_UTXO, []string{"Alice"})
 	return
 }
 
@@ -215,7 +211,7 @@ func (uictx *UIContext) DoEventJoined(event *UIEvent) {
 	if !uictx.CheckStateIn(UI_STATE_WAIT_PLAYER) {
 		panic(errors.New("command not for now"))
 	}
-	uictx.SetState(UI_STATE_WAIT_PREIMAGE_UTXO, []string{event.Params})
+	uictx.SetState(UI_STATE_WAIT_PREIMAGE_UTXO, []string{"Bob"})
 	return
 }
 
