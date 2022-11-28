@@ -16,4 +16,4 @@ cp satoshicard /work/bin-satoshicard/satoshicard/satoshicard
 cp 1.sh /work/bin-satoshicard/satoshicard/1.sh
 cp 2.sh /work/bin-satoshicard/satoshicard/2.sh
 cp -r scripts /work/bin-satoshicard/satoshicard/scripts
-cp -r scripts /work/bin-satoshicard/satoshicard/start_bsv.sh
+cp -r start_bsv.sh /work/bin-satoshicard/satoshicard/start_bsv.sh
