@@ -1,7 +1,7 @@
 /*
     1-13:Diamond A-K || 14 - 26:Club || 27 - 39：Hearts || 39 - 52 : Spades || 53.54：kings）to demonstrate a deck of poker
     for a certain number, the quotient of 13 is represents the suit(25/13=1, is Club),
-    the reminder of 13 represents the point(25%13=12, is Q)
+    and the reminder of 13 represents the point of the card(25%13=12, is Q)
 
     0 No bull; 1-9 Bull 1 to Bull 9; 10 Niu Niu; 11 Silver Bull; 12 Gold Bull; 13 Bomb; 14 Five calf
 */
