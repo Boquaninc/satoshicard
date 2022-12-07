@@ -1,26 +1,27 @@
 /*
-    1-13:方片 A-K || 14 - 26:梅花 || 27 - 39：红桃 || 39 - 52 : 黑桃 || 53.54：小王.大王）表示的一副扑克牌
-    这样对数组除以13等于扑克花色（如：25/13 = 2 是红桃），对数组值取模等于扑克点数（如：25%13 = 12 是Q）
+    1-13:Diamond A-K || 14 - 26:Club || 27 - 39：Hearts || 39 - 52 : Spades || 53.54：kings）to demonstrate a deck of poker
+    for a certain number, the quotient of 13 is represents the suit(25/13=1, is Club),
+    the reminder of 13 represents the point(25%13=12, is Q)
 
-    0 没有牛; 1-9 牛1 到牛9; 10 牛10; 11 四张花牌牛牛; 12 五张花牌牛牛; 13 炸弹; 14 五小牛
+    0 No bull; 1-9 Bull 1 to Bull 9; 10 Niu Niu; 11 Silver Bull; 12 Gold Bull; 13 Bomb; 14 Five calf
 */
 import "./utils/mimc7" as mimc7;
 import "./utils/pack/u32/pack128" as pack128;
 import "./utils/casts/u32_to_field" as u32_to_field;
 import "./utils/casts/field_to_u32.zok" as field_to_u32;
 
-// 获取扑克牌的牌面点数
+// get the point of the card
 def getPokerCount(u32 n) -> u32 {
     return (n % 13);
 }
 
-// 获取牛牛的牌面点数
+// convert point of the card to niu niu style
 def convertToNiuniuPokerCount(u32 n) -> u32 {
     u32 count = getPokerCount(n);
     return if ((count == 0) || (count > 10)) {10} else {count};
 }
 
-// 获取牛几
+// get the niu niu point of the card
 def getNiuByCards(u32[5] cards) -> u32 {
     u32 mut total = 0;
     for u32 i in 0..5 {
@@ -46,7 +47,7 @@ def getNiuByCards(u32[5] cards) -> u32 {
     return (n1 | n2 | n3 | n4 | n5 | n6 | n7 | n8 | n9 | n10);
 }
 
-// 是否5小牛
+// check whether 'Five calf'
 def isSmallNiu(u32[5] cards, u32 niu) -> u32 {
     u32 mut total = 0;
     for u32 i in 0..5 {
@@ -55,17 +56,17 @@ def isSmallNiu(u32[5] cards, u32 niu) -> u32 {
     return if total < 10 {14} else {niu};
 }
 
-// 是否是炸弹 getPokerCount
+// check whether 'Bomb'
 def isBomb(u32[5] cards, u32 niu) -> u32 {
 
-    //  第一个数出现的次数
+    // counts of the first card
     u32 i1 = if cards[0] == cards[1] {1} else {0};
     u32 i2 = if cards[0] == cards[2] {1} else {0};
     u32 i3 = if cards[0] == cards[3] {1} else {0};
     u32 i4 = if cards[0] == cards[4] {1} else {0};
     u32 d1 = i1 + i2 + i3 + i4;
 
-    // 第二个数出现的次数
+    // counts of the second card
     u32 j1 = if cards[1] == cards[0] {1} else {0};
     u32 j2 = if cards[1] == cards[2] {1} else {0};
     u32 j3 = if cards[1] == cards[3] {1} else {0};
@@ -75,27 +76,27 @@ def isBomb(u32[5] cards, u32 niu) -> u32 {
     return if (d1+d1) == 3 {13} else {niu};
 }
 
-// 全花牌牛牛
+// check whether 'Gold Bull'
 def isFiveJQK(u32[5] cards, u32 niu) -> u32 {
-    u32 mut count10 = 0; // 10 出现的次数
+    u32 mut count10 = 0; // counts of 'ten'
     for u32 i in 0..5 {
         count10 = if cards[i] == 10 {count10+1} else {count10};
     }
     return if count10 == 5 {12} else {niu};
 }
 
-// 四张花牌牛牛
+// check whether 'Silver Bull'
 def isFourJQK(u32[5] cards, u32 niu) -> u32 {
-    u32 mut count10 = 0; // 10 出现的次数
+    u32 mut count10 = 0; // counts of 'ten'
     for u32 i in 0..5 {
         count10 = if cards[i] == 10 {count10+1} else {count10};
     }
     return if count10 == 4 {11} else {niu};
 }
 
-// 获取扑克最大点数
+// get the max point of five hand cards
 def getMaxPokerCount(u32[5] cards) -> u32 {
-    // 0 为 K 最大
+    // K is max
     u32 mut max = 0;
     for u32 i in 0..5 {
         u32 convertPokerCount = if cards[i] == 0 {13} else {cards[i]};
@@ -130,7 +131,7 @@ def shuffle(field n1, field n2) -> u32[10] {
     return initPoker;
 }
 
-// winHash为每个人的第一张牌的 hash 值
+// winHash is the hash of first card of each one
 def turnNiuniu(u32 n1, u32 n2, u32 n3, u32 n4, u32 n5, u32 n6, u32 n7, u32 n8, u32 n9, u32 n10, field p1Hash, field p2Hash, field inputWinHash, field multiple) {
 
     u32[5] niuPokerList1 = [
@@ -185,7 +186,7 @@ def turnNiuniu(u32 n1, u32 n2, u32 n3, u32 n4, u32 n5, u32 n6, u32 n7, u32 n8, u
     field mut winHash = if niu1 >= niu2 {p1Hash} else {p2Hash};
     u32 winNiu = if niu1 >= niu2 {niu1} else {niu2};
 
-    // 点数一样
+    // same point
     winHash = if niu1 == niu2 {getIfEqualNiuCount(niu1MaxPokerCount, niu2MaxPokerCount, p1Hash, p2Hash)} else {winHash};
 
     field mut winMultiple = 1;

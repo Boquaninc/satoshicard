@@ -1,4 +1,31 @@
 # README
+## Game rules
+### General rules
+- Cards count the same number of points as in baccarat: aces = 1, 2-10 = pip value, face cards = zero. As in baccarat, if a group of cards has a total point value greater than 9, then the tens digit is dropped and the point value of the hand is the terminal digit of the sum of the individual points.
+- There are five cards. Three-card hand is zero points and the two-card hand has 1 to 9 points. The more points within this range, the higher the rank. For example, (4, 6, Q, 9, 9) is Bull 8
+- Impossible to make zero points in the three-card hand. For example, (7, 8, A, 4, J) is No bull
+- Three-card hand and two-card hand are both zero points, known as a "Niu Niu." which translates to "bull bull" in English. For example, (7,8,5,K,10) is Niu Niu
+- In Niu Niu poker game, the one with a higher ranking wins the game. For example, if player A is Bull 9, player B is Bull 5, player C is Niu Niu, play D is No bull, then player D should pay player A twice the bets, player B one times the bets, player C three times the bets. Player C in this round has the highest ranking, so player C wins player A, player B and player D three times the bets. Player B should pay player A twice the bets, player C three times the bets, while wins player D one times the bets. Player A wins player B twice the bets, player D twice the bets, while pays player C three times the bets. (In this demo game, it only allows two players at a time)
+### General hands
+- No bull: for example, 10 3 2 Q 6 is No bull, because it is impossible to make zero points in the three-card hand
+- Bull 1-9: for example, 10 3 7 Q 6 is Bull 6
+- Niu Niu: for example, 10 3 7 Q K is Niu Niu
+### Ranking of hands
+- Spades > Hearts > Club >Diamond
+- No bull, the side with the highest ranking card shall win. The ranks of the cards, from highest to lowest, is: K>Q>J>10>9>8>7>6>5>4>3>2>ACE.
+- Bull 1-9, the more points within this range, the higher the rank. From highest to lowest, is 9-8-...A
+- Niu Niu, in the event that the highest ranking card does not break a tie, then the highest ranking suit shall win. The order of suits, from highest to lowest, is Spades > Hearts > Club >Diamond.
+### Scoring methods
+- Five calf -------------------------------------------------- 7 times and the bets
+- Bomb (Four cards of the same rank)----------------------- 6 times and the bets
+- Gold Bull (All face cards)---------------------------------- 5 times and the bets
+- Silver Bull (Four face cards)------------------------------- 4 times and the bets
+- Niu Niu--------------------------------------------------- 3 times and the bets
+- Bull 7, Bull 8, Bull 9---------------------------------------- 2 times and the bets
+- No bull---------------------------------------------------- 1 times and the bets
+
+Face cards are K, Q, J. The scoring method between the banker and the player is fixed. The amount of money won by the banker is directly proportional to the amount of money lost by the player. For example, if the player bets 1 BSV, and the banker gets Niu Niu and wins, then the player should pay 3 times the bets, which is 3 BSV, to the banker. So the amount of winning and losing chips between the two sides is fixed.
+
 ## Demo Tutorials
 ### docker
 
